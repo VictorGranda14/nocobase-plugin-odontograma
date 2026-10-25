@@ -39,7 +39,7 @@ En un proyecto creado con `npx create-nocobase-app@<versión exacta de NocoBase 
 
 ## Instalar en Railway (GRANDASALUDV1)
 
-1. Descomprimir el `.tgz`. Su carpeta `package/` se copia a `storage/plugins/@gransalud/plugin-odontograma/` de la rama del entorno. El Dockerfile ya copia `storage/plugins`.
+1. Descomprimir el `.tgz` en `storage/plugins/@gransalud/plugin-odontograma/` de la rama del entorno. El Dockerfile ya copia `storage/plugins`.
 2. Hacer push y esperar el redeploy.
 3. Activar «Odontograma» en el gestor de plugins. La activación queda guardada en la base de datos.
 
