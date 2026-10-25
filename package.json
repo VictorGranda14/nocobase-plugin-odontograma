@@ -1,0 +1,25 @@
+{
+  "name": "@gransalud/plugin-odontograma",
+  "version": "1.0.0",
+  "displayName": "Odontograma",
+  "displayName.es-ES": "Odontograma",
+  "description": "Interactive odontogram block: assign dental procedures with prices to teeth, quadrants, arches or the whole mouth, and export the budget as PDF.",
+  "description.es-ES": "Bloque de odontograma interactivo: asigna prestaciones dentales con precio a dientes, cuadrantes, arcadas o boca completa, y exporta el presupuesto en PDF.",
+  "main": "dist/server/index.js",
+  "keywords": [
+    "Blocks"
+  ],
+  "devDependencies": {
+    "@ant-design/icons": "5.x",
+    "@formily/react": "2.x",
+    "antd": "5.x",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9",
+    "react": "18.x",
+    "react-odontogram": "0.6.0"
+  },
+  "peerDependencies": {
+    "@nocobase/client": "1.x",
+    "@nocobase/server": "1.x"
+  }
+}
