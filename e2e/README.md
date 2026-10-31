@@ -2,11 +2,11 @@
 
 Corren con Playwright contra un NocoBase local que tenga el plugin activado. Requisitos:
 
-1. Las colecciones creadas con `scripts/crear-colecciones.mjs`, con al menos una ficha clínica.
+1. Las colecciones creadas con `scripts/crear-colecciones.mjs`, con al menos una ficha clínica que tenga paciente.
 2. En el catálogo, las prestaciones «Resina» (diente), «Destartraje por cuadrante», «Frenillos arcada» y «Limpieza» (boca), cada una con un color distinto.
-3. Una página «Fichas dentales» con una tabla de `fichaDental`, la acción «Ver» y el bloque Odontograma dentro de su popup.
+3. Una página «Fichas dentales» cuya primera tabla sea de `fichaDental`, con la acción «Ver» y el bloque Odontograma dentro de su popup.
 
-Cada prueba crea su propia ficha dental por API y la borra al terminar.
+Cada prueba crea por API sus fichas dentales, planes de tratamiento y prestaciones, y los borra al terminar.
 
 Desde la copia del plugin en el proyecto de compilación (para que se resuelva `@playwright/test`):
 

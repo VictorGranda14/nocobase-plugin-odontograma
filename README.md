@@ -2,9 +2,10 @@
 
 Plugin propio de GranSalud: un bloque de NocoBase 1.x para el popup «Ver» de una **ficha dental**. Permite:
 
-- Ver un odontograma (FDI, dentición permanente) pintado según las prestaciones asignadas.
+- Asociar la atención a un **plan de tratamiento** nuevo o continuar uno anterior del mismo paciente, para seguirlo a lo largo de varias citas.
+- Ver un odontograma (FDI, dentición permanente) pintado según las prestaciones del plan.
 - Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable.
-- Marcar cada prestación como planificada o realizada, y ver los totales.
+- Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales).
 
 El plugin no tiene lógica de servidor: lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
@@ -22,8 +23,11 @@ NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave
 | Colección | Campos |
 |---|---|
 | `prestacionesDentales` (catálogo) | `nombrePrestacion`, `alcance` (`diente`/`cuadrante`/`arcada`/`boca`), `precio` (CLP), `color`, `activo` |
-| `fichaDental` (atención) | `fecha`, `observaciones`, `fichaClinicaAsociada` → `fichasClinicas` (`FK_fichaClinica`; inversa `fichasDentalesAsociadas`) |
-| `prestacionesFichaDental` (líneas) | `fichaDentalAsociada` → `fichaDental` (`FK_fichaDental`; inversa `prestacionesAsociadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `precio`, `estado` (`planificado`/`realizado`), `notas` |
+| `planesTratamiento` (plan) | `pacienteAsociado` → `paciente` (`FK_paciente`; inversa `planesTratamientoAsociados`) |
+| `fichaDental` (atención) | `fecha`, `observaciones`, `fichaClinicaAsociada` → `fichasClinicas` (`FK_fichaClinica`; inversa `fichasDentalesAsociadas`), `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `fichasDentalesAsociadas`) |
+| `prestacionesPlanTratamiento` (líneas) | `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `prestacionesAsociadas`), `fichaDentalRealizacion` → `fichaDental` (`FK_fichaDentalRealizacion`; inversa `prestacionesRealizadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `precio`, `estado` (`planificado`/`realizado`), `notas` |
+
+Cada ficha dental (una atención) apunta a un plan, y un plan se comparte entre las atenciones de un mismo paciente. Las prestaciones pertenecen al plan; `fichaDentalRealizacion` guarda en qué atención se marcó como realizada.
 
 `zona` vale `11`…`48` (diente), `C1`…`C4` (cuadrante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
 
@@ -51,8 +55,11 @@ Es un plugin propio: no está publicado en npm ni en el marketplace de NocoBase,
 2. Ir a *Añadir bloque → Otros bloques → Odontograma*.
 3. En los ajustes del bloque se puede activar **Solo lectura**: oculta agregar, eliminar y el cambio de estado, pero deja consultar dientes y descargar el PDF.
 
+Si la ficha dental aún no tiene plan, el bloque ofrece **Crear plan nuevo** o **Continuar plan** (lista los planes del paciente con su fecha de inicio y cantidad de prestaciones). En solo lectura solo avisa que no hay plan.
+
 ## Limitaciones
 
 - Solo dientes permanentes y diente completo (caras y dientes temporales: issues #2 y #5).
 - Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante > arcada). El tooltip y la tabla muestran todas las prestaciones que lo afectan.
 - La imagen del PDF no incluye la leyenda de colores; la tabla del presupuesto detalla cada línea.
+- El plan de una atención no se cambia desde el bloque una vez elegido; se puede editar el campo «Plan de Tratamiento» con los formularios normales de NocoBase.
