@@ -1,6 +1,6 @@
 import { DeleteOutlined, FilePdfOutlined, PlusOutlined } from '@ant-design/icons';
+import { Odontograma } from '@gransalud/odontograma-react';
 import {
-  createStyles,
   useAPIClient,
   useCollection,
   useCollectionRecordData,
@@ -10,8 +10,6 @@ import {
 } from '@nocobase/client';
 import { App, Alert, Button, Col, Empty, InputNumber, Popconfirm, Row, Segmented, Select, Space, Statistic, Switch, Table, Tag, Typography } from 'antd';
 import React, { useMemo, useRef, useState } from 'react';
-import { Odontogram } from 'react-odontogram';
-import 'react-odontogram/style.css';
 import {
   CAMPOS_CATALOGO,
   CAMPOS_FICHA,
@@ -30,9 +28,7 @@ import {
   Alcance,
   BOCA,
   CUADRANTES,
-  aIdLibreria,
   alcanceDeZona,
-  deIdLibreria,
   dientesDeZona,
   etiquetaZona,
   ordenZona,
@@ -73,32 +69,13 @@ function useFichaDental() {
   return null;
 }
 
-function oscurecer(color: string): string {
-  const hex = /^#([0-9a-f]{6})$/i.exec(color.trim());
-  if (!hex) return color;
-  const n = parseInt(hex[1], 16);
-  const canal = (desplazamiento: number) => Math.round(((n >> desplazamiento) & 255) * 0.65);
-  return `rgb(${canal(16)}, ${canal(8)}, ${canal(0)})`;
-}
-
 const ESPECIFICIDAD: Record<Alcance, number> = { boca: 0, arcada: 1, cuadrante: 2, diente: 3 };
-
-const useStyles = createStyles(({ css }) => ({
-  odontograma: css`
-    max-width: 460px;
-    /* La leyenda de la librería capitaliza cada palabra con estilo en línea. */
-    [aria-label='Tooth condition legend'] span {
-      text-transform: none !important;
-    }
-  `,
-}));
 
 const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = false }) => {
   const fichaId = useFichaDental();
   const api = useAPIClient();
   const { message } = App.useApp();
   const contenedor = useRef<HTMLDivElement>(null);
-  const { styles } = useStyles();
 
   const [diente, setDiente] = useState<string | null>(null);
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
@@ -107,8 +84,6 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
   const [soloDiente, setSoloDiente] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
-  // La selección de la librería no es controlada: cambiar la key la limpia.
-  const [montaje, setMontaje] = useState(0);
 
   const lineasReq = useRequest<{ data: Linea[] }>(
     {
@@ -150,30 +125,19 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     return (id?: number) => (id && colores.get(id)) || COLORES_POR_DEFECTO[0];
   }, [lineas]);
 
-  // Un grupo por prestación y alcance; la librería pinta con el último grupo que contiene
-  // un diente, así que se ordena de lo general a lo específico.
-  const condiciones = useMemo(() => {
-    const grupos = new Map<string, { label: string; teeth: Set<string>; fillColor: string; outlineColor: string; orden: number }>();
-    lineas.forEach((linea) => {
-      const alcance = alcanceDeZona(linea.zona);
-      if (!alcance || alcance === 'boca') return;
-      const clave = `${linea.FK_prestacion}:${alcance}`;
-      if (!grupos.has(clave)) {
-        const color = colorDe(linea.FK_prestacion);
-        grupos.set(clave, {
-          label: linea.prestacionAsociada?.nombrePrestacion ?? 'Prestación',
-          teeth: new Set(),
-          fillColor: color,
-          outlineColor: oscurecer(color),
-          orden: ESPECIFICIDAD[alcance],
-        });
-      }
-      dientesDeZona(linea.zona).forEach((d) => grupos.get(clave).teeth.add(aIdLibreria(d)));
-    });
-    return Array.from(grupos.values())
-      .sort((a, b) => a.orden - b.orden)
-      .map(({ orden, teeth, ...grupo }) => ({ ...grupo, teeth: Array.from(teeth) }));
+  // Cada diente toma el color de la zona más específica que lo afecta (diente > cuadrante > arcada).
+  const dientesPintados = useMemo(() => {
+    const pintados: Record<string, string> = {};
+    [...lineas]
+      .sort((a, b) => ESPECIFICIDAD[alcanceDeZona(a.zona) ?? 'boca'] - ESPECIFICIDAD[alcanceDeZona(b.zona) ?? 'boca'])
+      .forEach((linea) => dientesDeZona(linea.zona).forEach((d) => (pintados[d] = colorDe(linea.FK_prestacion))));
+    return pintados;
   }, [lineas, colorDe]);
+
+  // Referencias de color de lo que está pintado en el dibujo (sin boca completa, que va aparte).
+  const referencias = Array.from(
+    new Map(lineas.filter((l) => l.zona !== BOCA).map((l) => [l.FK_prestacion, l.prestacionAsociada?.nombrePrestacion])),
+  );
 
   const lineasBoca = lineas.filter((l) => l.zona === BOCA);
   const lineasVisibles = soloDiente && diente ? lineas.filter((l) => zonaAfectaDiente(l.zona, diente)) : lineas;
@@ -185,10 +149,9 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
   const alcance = prestacion?.alcance;
   const zonaEfectiva = alcance === 'diente' ? diente : zona;
 
-  const elegirDiente = (seleccion: { id: string }[]) => {
-    const nuevo = seleccion[0] ? deIdLibreria(seleccion[0].id) : null;
+  const elegirDiente = (nuevo: string) => {
     setDiente(nuevo);
-    if (nuevo && alcance && alcance !== 'diente' && alcance !== 'boca') setZona(zonaPorDefecto(alcance, nuevo));
+    if (alcance && alcance !== 'diente' && alcance !== 'boca') setZona(zonaPorDefecto(alcance, nuevo));
   };
 
   const elegirPrestacion = (id: number) => {
@@ -247,7 +210,6 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       // Sin selección, para que el diente seleccionado salga con su color en la imagen.
       if (diente) {
         setDiente(null);
-        setMontaje((n) => n + 1);
         await new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver)));
       }
       const [{ generarPresupuestoPdf }, respuesta] = await Promise.all([
@@ -347,8 +309,8 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
 
   return (
     <Row gutter={[24, 16]}>
-      <Col xs={24} lg={11}>
-        <div ref={contenedor} className={styles.odontograma}>
+      <Col span={24}>
+        <div ref={contenedor}>
           {lineasBoca.length > 0 && (
             <Space size={[4, 4]} wrap style={{ marginBottom: 8 }}>
               <Typography.Text type="secondary">Boca completa:</Typography.Text>
@@ -360,38 +322,38 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
             </Space>
           )}
           {/* Siempre seleccionable, también en solo lectura, para consultar cada diente. */}
-          <Odontogram
-            key={montaje}
-            singleSelect
-            notation="FDI"
-            teethConditions={condiciones}
-            showLabels={condiciones.length > 0}
-            onChange={elegirDiente}
-            tooltip={{
-              placement: 'top',
-              content: (detalle) => {
-                if (!detalle) return null;
-                const d = detalle.notations.fdi;
-                const afectan = lineasDeDiente(d);
-                return (
-                  <div>
-                    <strong>
-                      {d} · {tipoDeDiente(d)}
-                    </strong>
-                    {afectan.map((l) => (
-                      <div key={l.id}>
-                        {l.prestacionAsociada?.nombrePrestacion}
-                        {l.zona !== d ? ` (${etiquetaZona(l.zona).toLowerCase()})` : ''}
-                      </div>
-                    ))}
-                  </div>
-                );
-              },
-            }}
-          />
+          <div style={{ width: '80%', margin: '0 auto' }}>
+            <Odontograma
+              dientesPintados={dientesPintados}
+              dienteSeleccionado={diente}
+              onSeleccionarDiente={elegirDiente}
+              contenidoTooltip={(d) => (
+                <div>
+                  <strong>
+                    {d} · {tipoDeDiente(d)}
+                  </strong>
+                  {lineasDeDiente(d).map((l) => (
+                    <div key={l.id}>
+                      {l.prestacionAsociada?.nombrePrestacion}
+                      {l.zona !== d ? ` (${etiquetaZona(l.zona).toLowerCase()})` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+            />
+          </div>
+          {referencias.length > 0 && (
+            <Space size={[4, 4]} wrap>
+              {referencias.map(([id, nombre]) => (
+                <Tag key={id} color={colorDe(id)}>
+                  {nombre}
+                </Tag>
+              ))}
+            </Space>
+          )}
         </div>
       </Col>
-      <Col xs={24} lg={13}>
+      <Col span={24}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
             {diente ? `Diente ${diente} · ${tipoDeDiente(diente)}` : 'Selecciona un diente en el odontograma'}
@@ -445,7 +407,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
 
           <Space>
             <Switch size="small" checked={soloDiente} disabled={!diente} onChange={setSoloDiente} />
-            <Typography.Text>Solo lo que afecta al diente seleccionado</Typography.Text>
+            <Typography.Text>Filtrar solo lo que afecta al diente seleccionado</Typography.Text>
           </Space>
 
           <Table

@@ -120,6 +120,3 @@ export function zonaPorDefecto(alcance: Alcance, diente?: string | null): string
       return BOCA;
   }
 }
-
-export const aIdLibreria = (diente: string) => `teeth-${diente}`;
-export const deIdLibreria = (id: string) => id.replace(/^teeth-/, '');

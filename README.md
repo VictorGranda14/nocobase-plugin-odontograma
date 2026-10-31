@@ -1,6 +1,6 @@
 # @gransalud/plugin-odontograma
 
-Bloque de NocoBase 1.x para el popup «Ver» de una **ficha dental**. Permite:
+Plugin propio de GranSalud: un bloque de NocoBase 1.x para el popup «Ver» de una **ficha dental**. Permite:
 
 - Ver un odontograma (FDI, dentición permanente) pintado según las prestaciones asignadas.
 - Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable.
@@ -37,11 +37,12 @@ En un proyecto creado con `npx create-nocobase-app@<versión exacta de NocoBase 
 2. Ejecutar `yarn build @gransalud/plugin-odontograma --tar --no-dts`.
 3. El paquete queda en `storage/tar/@gransalud/plugin-odontograma-<versión>.tgz`.
 
-## Instalar en Railway (GRANDASALUDV1)
+## Instalar en NocoBase
 
-1. Descomprimir el `.tgz` en `storage/plugins/@gransalud/plugin-odontograma/` de la rama del entorno. El Dockerfile ya copia `storage/plugins`.
-2. Hacer push y esperar el redeploy.
-3. Activar «Odontograma» en el gestor de plugins. La activación queda guardada en la base de datos.
+Es un plugin propio: no está publicado en npm ni en el marketplace de NocoBase, así que se instala desde el `.tgz` compilado.
+
+1. En el gestor de plugins, *Añadir y actualizar → Subir plugin* y elegir el `.tgz`. También se puede descomprimir en `storage/plugins/@gransalud/plugin-odontograma/` de la instancia y reiniciar NocoBase.
+2. Activar «Odontograma» en el gestor de plugins.
 
 ## Uso
 
