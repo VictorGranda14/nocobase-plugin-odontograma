@@ -9,7 +9,7 @@ Plugin propio de GranSalud: un bloque de NocoBase 1.x para el popup «Ver» de u
 
 El plugin no tiene lógica de servidor: lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
 
-Librerías incluidas en el paquete: [`react-odontogram`](https://github.com/biomathcode/react-odontogram) 0.6.0, `jspdf` 4.2.1 y `jspdf-autotable` 5.0.9, todas MIT. jsPDF solo se descarga al generar un PDF.
+El dibujo viene del paquete propio [`@gransalud/odontograma-react`](https://github.com/VictorGranda14/odontograma-react) (dientes de perfil y círculo de 5 caras). Los dientes se basan en la ilustración «The chart of human teeth» de [Vecteezy.com](https://www.vecteezy.com). También se incluyen `jspdf` 4.2.1 y `jspdf-autotable` 5.0.9 (MIT); jsPDF solo se descarga al generar un PDF.
 
 ## Colecciones
 
@@ -33,9 +33,10 @@ Los nombres de colecciones y campos están centralizados en `src/client/constant
 
 En un proyecto creado con `npx create-nocobase-app@<versión exacta de NocoBase del entorno>`:
 
-1. Copiar este repositorio a `packages/plugins/@gransalud/plugin-odontograma` y ejecutar `yarn install`.
-2. Ejecutar `yarn build @gransalud/plugin-odontograma --tar --no-dts`.
-3. El paquete queda en `storage/tar/@gransalud/plugin-odontograma-<versión>.tgz`.
+1. Compilar `odontograma-react` (`npm run build`) y copiar su `dist/` y su `package.json` (sin `devDependencies` ni `scripts`) a `packages/libs/odontograma-react`.
+2. Copiar este repositorio a `packages/plugins/@gransalud/plugin-odontograma` y ejecutar `yarn install`.
+3. Ejecutar `yarn build @gransalud/plugin-odontograma --tar --no-dts`.
+4. El paquete queda en `storage/tar/@gransalud/plugin-odontograma-<versión>.tgz`.
 
 ## Instalar en NocoBase
 
@@ -52,6 +53,6 @@ Es un plugin propio: no está publicado en npm ni en el marketplace de NocoBase,
 
 ## Limitaciones
 
-- Solo dientes permanentes y diente completo; no hay dientes de leche ni caras del diente.
+- Solo dientes permanentes y diente completo (caras y dientes temporales: issues #2 y #5).
 - Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante > arcada). El tooltip y la tabla muestran todas las prestaciones que lo afectan.
 - La imagen del PDF no incluye la leyenda de colores; la tabla del presupuesto detalla cada línea.

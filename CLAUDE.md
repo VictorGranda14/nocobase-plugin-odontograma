@@ -1,0 +1,2 @@
+- En NocoBase 1.9, `destroy` con `filter` en la query borra todo: borrar siempre por `filterByTk`.
+- El dibujo vive en `@gransalud/odontograma-react`; el plugin solo traduce las líneas a props (`dientesPintados`, `dienteSeleccionado`).
