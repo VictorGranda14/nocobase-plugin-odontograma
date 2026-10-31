@@ -8,20 +8,24 @@ import {
   useRequest,
   withDynamicSchemaProps,
 } from '@nocobase/client';
-import { App, Alert, Button, Col, Empty, InputNumber, Popconfirm, Row, Segmented, Select, Space, Statistic, Switch, Table, Tag, Typography } from 'antd';
+import { App, Alert, Button, Col, Empty, InputNumber, Popconfirm, Row, Segmented, Select, Space, Spin, Statistic, Switch, Table, Tag, Typography } from 'antd';
 import React, { useMemo, useRef, useState } from 'react';
 import {
   CAMPOS_CATALOGO,
   CAMPOS_FICHA,
   CAMPOS_LINEA,
+  CAMPOS_PLAN,
   COLECCION_CATALOGO,
   COLECCION_FICHA,
   COLECCION_LINEAS,
+  COLECCION_PLAN,
   COLORES_POR_DEFECTO,
   ESTADOS,
   Estado,
   clp,
+  fechaCL,
 } from './constants';
+import { ElegirPlan } from './ElegirPlan';
 import {
   ALCANCES,
   ARCADAS,
@@ -53,6 +57,8 @@ interface Linea {
   notas?: string;
   FK_prestacion?: number;
   prestacionAsociada?: Prestacion;
+  FK_fichaDentalRealizacion?: number | null;
+  fichaDentalRealizacion?: { id: number; fecha?: string } | null;
 }
 
 export interface OdontogramaBlockProps {
@@ -85,18 +91,35 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
   const [guardando, setGuardando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
 
+  // La ficha dental es la atención; las prestaciones pertenecen a su plan de tratamiento.
+  const fichaReq = useRequest<{ data: Record<string, any> }>(
+    {
+      resource: COLECCION_FICHA,
+      action: 'get',
+      params: {
+        filterByTk: fichaId,
+        appends: [`${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.paciente}`, `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.funcionario}`],
+      },
+    },
+    { ready: !!fichaId, refreshDeps: [fichaId] },
+  );
+  const ficha = fichaReq.data?.data;
+  const planId: number | null = ficha?.[CAMPOS_FICHA.fkPlan] ?? null;
+  // Con appends anidados la ficha clínica llega solo con sus relaciones, sin sus claves foráneas.
+  const pacienteId: number | null = ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente]?.id ?? null;
+
   const lineasReq = useRequest<{ data: Linea[] }>(
     {
       resource: COLECCION_LINEAS,
       action: 'list',
       params: {
-        filter: { [CAMPOS_LINEA.fkFicha]: fichaId },
-        appends: [CAMPOS_LINEA.prestacion],
+        filter: { [CAMPOS_LINEA.fkPlan]: planId },
+        appends: [CAMPOS_LINEA.prestacion, CAMPOS_LINEA.realizacion],
         paginate: false,
         sort: ['id'],
       },
     },
-    { ready: !!fichaId, refreshDeps: [fichaId] },
+    { ready: !!planId, refreshDeps: [planId] },
   );
 
   const catalogoReq = useRequest<{ data: Prestacion[] }>({
@@ -179,7 +202,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       () =>
         api.resource(COLECCION_LINEAS).create({
           values: {
-            [CAMPOS_LINEA.fkFicha]: fichaId,
+            [CAMPOS_LINEA.fkPlan]: planId,
             [CAMPOS_LINEA.fkPrestacion]: prestacion.id,
             [CAMPOS_LINEA.zona]: zonaEfectiva,
             [CAMPOS_LINEA.precio]: precio,
@@ -194,13 +217,29 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     setZona(null);
   };
 
-  const alternarEstado = (linea: Linea) =>
-    ejecutar(() =>
+  // Al marcarla como realizada se registra la atención actual; al volver a planificada se limpia.
+  const alternarEstado = (linea: Linea) => {
+    const realizada = linea.estado !== 'realizado';
+    return ejecutar(() =>
       api.resource(COLECCION_LINEAS).update({
         filterByTk: linea.id,
-        values: { [CAMPOS_LINEA.estado]: linea.estado === 'realizado' ? 'planificado' : 'realizado' },
+        values: {
+          [CAMPOS_LINEA.estado]: realizada ? 'realizado' : 'planificado',
+          [CAMPOS_LINEA.fkRealizacion]: realizada ? fichaId : null,
+        },
       }),
     );
+  };
+
+  const asociarPlan = async (id: number) => {
+    await api.resource(COLECCION_FICHA).update({ filterByTk: fichaId, values: { [CAMPOS_FICHA.fkPlan]: id } });
+    await fichaReq.refresh();
+  };
+
+  const crearPlan = async () => {
+    const respuesta = await api.resource(COLECCION_PLAN).create({ values: { [CAMPOS_PLAN.fkPaciente]: pacienteId } });
+    await asociarPlan(respuesta?.data?.data?.id);
+  };
 
   const eliminar = (linea: Linea) => ejecutar(() => api.resource(COLECCION_LINEAS).destroy({ filterByTk: linea.id }));
 
@@ -212,30 +251,19 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
         setDiente(null);
         await new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver)));
       }
-      const [{ generarPresupuestoPdf }, respuesta] = await Promise.all([
-        import('./pdf'),
-        api.resource(COLECCION_FICHA).get({
-          filterByTk: fichaId,
-          appends: [
-            `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.paciente}`,
-            `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.funcionario}`,
-          ],
-        }),
-      ]);
-      const ficha = respuesta?.data?.data ?? {};
-      const paciente = ficha[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente] ?? {};
-      const funcionario = ficha[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.funcionario] ?? {};
+      const { generarPresupuestoPdf } = await import('./pdf');
+      const paciente = ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente] ?? {};
+      const funcionario = ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.funcionario] ?? {};
       const nombrePaciente =
         paciente.nombreCompleto || [paciente.nomPaciente, paciente.apellido1Pac, paciente.apellido2Pac].filter(Boolean).join(' ');
       const nombreFuncionario =
         funcionario.nombreCompleto || [funcionario.nombre, funcionario.primerApellido, funcionario.segundoApellido].filter(Boolean).join(' ');
-      const fecha = ficha[CAMPOS_FICHA.fecha];
       const { conImagen } = await generarPresupuestoPdf({
         paciente: nombrePaciente,
         rut: paciente.rutPaciente,
         profesional: nombreFuncionario,
-        fechaAtencion: fecha ? new Date(`${fecha}T12:00:00`).toLocaleDateString('es-CL') : undefined,
-        observaciones: ficha[CAMPOS_FICHA.observaciones],
+        fechaAtencion: fechaCL(ficha?.[CAMPOS_FICHA.fecha]) || undefined,
+        observaciones: ficha?.[CAMPOS_FICHA.observaciones],
         lineas: lineas.map((l) => ({
           zona: l.zona,
           prestacion: l.prestacionAsociada?.nombrePrestacion ?? '-',
@@ -264,6 +292,22 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     );
   }
 
+  if (!ficha) {
+    return (
+      <div data-odontograma>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (!planId) {
+    return (
+      <div data-odontograma>
+        <ElegirPlan pacienteId={pacienteId} readOnly={readOnly} onCrear={crearPlan} onContinuar={asociarPlan} />
+      </div>
+    );
+  }
+
   const lineasDeDiente = (d: string) => lineas.filter((l) => zonaAfectaDiente(l.zona, d));
 
   const opcionesCatalogo = (Object.keys(ALCANCES) as Alcance[])
@@ -282,13 +326,22 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       title: 'Estado',
       dataIndex: 'estado',
       render: (estado: Estado, l: Linea) => (
-        <Tag
-          color={ESTADOS[estado]?.color}
-          style={{ cursor: readOnly ? 'default' : 'pointer' }}
-          onClick={readOnly ? undefined : () => alternarEstado(l)}
-        >
-          {ESTADOS[estado]?.etiqueta ?? estado}
-        </Tag>
+        <>
+          <Tag
+            color={ESTADOS[estado]?.color}
+            style={{ cursor: readOnly ? 'default' : 'pointer' }}
+            onClick={readOnly ? undefined : () => alternarEstado(l)}
+          >
+            {ESTADOS[estado]?.etiqueta ?? estado}
+          </Tag>
+          {estado === 'realizado' && l.fichaDentalRealizacion && (
+            <Typography.Text type="secondary">
+              {l.fichaDentalRealizacion.fecha
+                ? ` el ${fechaCL(l.fichaDentalRealizacion.fecha)}`
+                : ` en la atención ${l.fichaDentalRealizacion.id}`}
+            </Typography.Text>
+          )}
+        </>
       ),
     },
     { title: 'Precio', dataIndex: 'precio', align: 'right' as const, render: (p: number) => clp(p) },
@@ -308,7 +361,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
   ];
 
   return (
-    <Row gutter={[24, 16]}>
+    <Row gutter={[24, 16]} data-odontograma>
       <Col span={24}>
         <div ref={contenedor}>
           {lineasBoca.length > 0 && (

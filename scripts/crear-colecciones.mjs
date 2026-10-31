@@ -5,7 +5,7 @@
 //   NOCOBASE_URL=https://staging.ejemplo.cl NOCOBASE_EMAIL=... NOCOBASE_PASSWORD=... node scripts/crear-colecciones.mjs
 //   (o NOCOBASE_TOKEN=<token de API> en lugar de email y contraseña)
 //
-// Requiere que ya exista la colección fichasClinicas.
+// Requiere que ya existan las colecciones fichasClinicas y paciente.
 
 const URL_BASE = (process.env.NOCOBASE_URL || 'http://localhost:13001').replace(/\/$/, '');
 
@@ -183,6 +183,16 @@ const COLECCIONES = [
     ],
   },
   {
+    name: 'planesTratamiento',
+    title: 'Planes de tratamiento',
+    fields: [
+      muchosAUno('pacienteAsociado', 'Paciente', 'paciente', 'FK_paciente', {
+        name: 'planesTratamientoAsociados',
+        title: 'Planes de Tratamiento Asociados',
+      }),
+    ],
+  },
+  {
     name: 'fichaDental',
     title: 'Ficha dental',
     fields: [
@@ -202,15 +212,24 @@ const COLECCIONES = [
         name: 'fichasDentalesAsociadas',
         title: 'Fichas Dentales Asociadas',
       }),
+      muchosAUno('planTratamientoAsociado', 'Plan de Tratamiento', 'planesTratamiento', 'FK_planTratamiento', {
+        name: 'fichasDentalesAsociadas',
+        title: 'Fichas Dentales Asociadas',
+      }),
     ],
   },
   {
-    name: 'prestacionesFichaDental',
-    title: 'Prestaciones de la ficha dental',
+    name: 'prestacionesPlanTratamiento',
+    title: 'Prestaciones del plan de tratamiento',
     fields: [
-      muchosAUno('fichaDentalAsociada', 'Ficha Dental Asociada', 'fichaDental', 'FK_fichaDental', {
+      muchosAUno('planTratamientoAsociado', 'Plan de Tratamiento', 'planesTratamiento', 'FK_planTratamiento', {
         name: 'prestacionesAsociadas',
         title: 'Prestaciones Asociadas',
+      }),
+      // Atención (ficha dental) en que se marcó como realizada.
+      muchosAUno('fichaDentalRealizacion', 'Realizada en', 'fichaDental', 'FK_fichaDentalRealizacion', {
+        name: 'prestacionesRealizadas',
+        title: 'Prestaciones Realizadas',
       }),
       muchosAUno('prestacionAsociada', 'Prestación', 'prestacionesDentales', 'FK_prestacion'),
       seleccion('zona', 'Zona', OPCIONES_ZONA),
@@ -236,7 +255,9 @@ async function existe(nombre) {
 
 async function main() {
   TOKEN = await token();
-  if (!(await existe('fichasClinicas'))) throw new Error('No existe la colección fichasClinicas en esta instancia.');
+  for (const requerida of ['fichasClinicas', 'paciente']) {
+    if (!(await existe(requerida))) throw new Error(`No existe la colección ${requerida} en esta instancia.`);
+  }
 
   for (const coleccion of COLECCIONES) {
     if (await existe(coleccion.name)) {
