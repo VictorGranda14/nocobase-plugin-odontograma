@@ -360,3 +360,27 @@ test('renombrar y eliminar secciones desde su menú se guarda con la ficha clín
     ['26', 'Urgencia'],
   ]);
 });
+
+test('el PDF agrupa las prestaciones por sección con su título y subtotal, en el orden de la pantalla', async ({ page }) => {
+  const drawer = await nuevaFichaClinica(page);
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const vista = drawer.locator('[data-odontograma]');
+  const seccion = vista.getByPlaceholder('Sección (opcional)');
+  await seccion.fill('Ortodoncia');
+  await agregarEnDiente(page, vista, '3.6', 'Resina');
+  await seccion.fill('Urgencia');
+  await agregarEnDiente(page, vista, '1.6', 'Resina');
+  await agregarEnDiente(page, vista, '2.6', 'Resina');
+
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    vista.getByRole('button', { name: /Descargar presupuesto/ }).click(),
+  ]);
+  const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
+  const posicion = (texto) => contenido.indexOf(`(${texto})`);
+  expect(posicion('Ortodoncia')).toBeGreaterThan(-1);
+  expect(posicion('Urgencia')).toBeGreaterThan(posicion('Ortodoncia'));
+  expect(posicion('Subtotal')).toBeGreaterThan(-1);
+  expect(posicion('$70.000')).toBeGreaterThan(posicion('Urgencia')); // subtotal de Urgencia
+  await cerrarSinGuardar(page, drawer);
+});

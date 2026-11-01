@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import fs from 'node:fs/promises';
 
 const USUARIO = process.env.E2E_USER || 'admin@nocobase.com';
 const CLAVE = process.env.E2E_PASSWORD || 'admin123';
@@ -203,21 +204,26 @@ test('marcar realizada una prestación registra la atención y la tabla muestra 
   expect((await api(request, 'prestacionesPlanTratamiento:get', { params: { filterByTk: linea.id } })).FK_fichaDentalRealizacion).toBeNull();
 });
 
-test('descargar el presupuesto desde el bloque genera el PDF con el RUT del paciente', async ({ page, request }) => {
+test('descargar el presupuesto desde el bloque genera el PDF del paciente; sin secciones, ordenado por zona y sin subtotales', async ({ page, request }) => {
   const resina = await prestacion(request, 'Resina');
   const plan = await crearPlan(request);
   await crearFicha(request, { plan });
+  await crearLinea(request, plan, resina, '26', 35000);
   await crearLinea(request, plan, resina, '16', 35000);
   const { rutPaciente } = await api(request, 'paciente:get', { params: { filterByTk: pacienteId } });
 
   const popup = await abrirFicha(page);
-  await expect(popup.locator('.ant-table-row')).toHaveCount(1);
+  await expect(popup.locator('.ant-table-row')).toHaveCount(2);
   const [descarga] = await Promise.all([
     page.waitForEvent('download'),
     popup.getByRole('button', { name: /Descargar presupuesto/ }).click(),
   ]);
   expect(descarga.suggestedFilename()).toMatch(`presupuesto-${rutPaciente.replaceAll('.', '')}-`);
   expect(descarga.suggestedFilename().endsWith('.pdf')).toBe(true);
+  const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
+  expect(contenido.indexOf('(Diente 16)')).toBeGreaterThan(-1);
+  expect(contenido.indexOf('(Diente 26)')).toBeGreaterThan(contenido.indexOf('(Diente 16)'));
+  expect(contenido).not.toContain('(Subtotal');
 });
 
 test('el bloque muestra las secciones en orden de creación con su subtotal y agrega a la sección indicada', async ({ page, request }) => {

@@ -35,6 +35,7 @@ export const useDescargarPresupuesto = () => {
             prestacion: l.prestacionAsociada?.nombrePrestacion ?? '-',
             estado: l.estado,
             precio: Number(l.precio) || 0,
+            seccion: l.seccion,
           })),
           svg,
         });

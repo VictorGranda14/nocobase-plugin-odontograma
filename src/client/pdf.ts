@@ -1,7 +1,8 @@
 // Se carga con import() dinámico: jsPDF solo se descarga al exportar.
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { RowInput } from 'jspdf-autotable';
 import { ESTADOS, Estado, PDF_NOTA_VALIDEZ, PDF_TITULO, clp } from './constants';
+import { SIN_SECCION, agruparPorSeccion } from './secciones';
 import { etiquetaZona } from './zonas';
 
 export interface LineaPresupuesto {
@@ -9,6 +10,7 @@ export interface LineaPresupuesto {
   prestacion: string;
   estado: Estado;
   precio: number;
+  seccion?: string | null;
 }
 
 export interface DatosPresupuesto {
@@ -79,6 +81,19 @@ const fechaHoy = () => new Date().toLocaleDateString('es-CL');
 
 const sanear = (texto: string) => texto.replace(/[^0-9A-Za-z-]+/g, '');
 
+const filaLinea = (l: LineaPresupuesto) => [etiquetaZona(l.zona), l.prestacion, ESTADOS[l.estado]?.etiqueta ?? l.estado, clp(l.precio)];
+
+// Igual que la tabla de la pantalla: sin secciones, una lista por zona; con secciones, cada una con su título y subtotal.
+function filasDelDetalle(lineas: LineaPresupuesto[]): RowInput[] {
+  const grupos = agruparPorSeccion(lineas);
+  if (grupos.every((g) => g.nombre === null)) return (grupos[0]?.lineas ?? []).map(filaLinea);
+  return grupos.flatMap((grupo) => [
+    [{ content: grupo.nombre ?? SIN_SECCION, colSpan: 4, styles: { fontStyle: 'bold', fillColor: [232, 240, 254] } }],
+    ...grupo.lineas.map(filaLinea),
+    ['', '', { content: 'Subtotal', styles: { fontStyle: 'bold' } }, { content: clp(grupo.subtotal), styles: { fontStyle: 'bold', halign: 'right' } }],
+  ] as RowInput[]);
+}
+
 export async function generarPresupuestoPdf(datos: DatosPresupuesto): Promise<ResultadoPdf> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const anchoPagina = doc.internal.pageSize.getWidth();
@@ -129,7 +144,7 @@ export async function generarPresupuestoPdf(datos: DatosPresupuesto): Promise<Re
     startY: y,
     margin: { left: MARGEN, right: MARGEN },
     head: [['Zona', 'Prestación', 'Estado', 'Precio']],
-    body: datos.lineas.map((l) => [etiquetaZona(l.zona), l.prestacion, ESTADOS[l.estado]?.etiqueta ?? l.estado, clp(l.precio)]),
+    body: filasDelDetalle(datos.lineas),
     foot: [
       ['', '', 'Planificado', clp(planificado)],
       ['', '', 'Realizado', clp(realizado)],
