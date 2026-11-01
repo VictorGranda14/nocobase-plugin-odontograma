@@ -1,6 +1,8 @@
 export const BLOCK_NAME = 'OdontogramaBlock';
 export const BLOCK_KEY = 'odontograma';
 export const BLOCK_SETTINGS_NAME = 'blockSettings:odontograma';
+export const CAMPO_PLAN_NAME = 'OdontogramaPlanField';
+export const CAMPO_PLAN_SETTINGS_NAME = 'fieldSettings:odontogramaPlan';
 
 // Colecciones creadas desde la interfaz de NocoBase (ver README).
 export const COLECCION_FICHA = 'fichaDental';
@@ -13,8 +15,14 @@ export const CAMPOS_FICHA = {
   observaciones: 'observaciones',
   fichaClinica: 'fichaClinicaAsociada',
   fkPlan: 'FK_planTratamiento',
+  plan: 'planTratamientoAsociado',
   paciente: 'pacienteAsociado',
   funcionario: 'funcionarioAsociado',
+};
+
+export const CAMPOS_FICHA_CLINICA = {
+  fkPaciente: 'FK_paciente',
+  paciente: 'pacienteAsociado',
 };
 
 export const CAMPOS_PLAN = {
