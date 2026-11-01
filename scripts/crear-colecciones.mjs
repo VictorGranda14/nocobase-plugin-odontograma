@@ -1,5 +1,5 @@
 // Crea las colecciones del odontograma en una instancia NocoBase 1.x mediante su API,
-// con las mismas definiciones que genera la interfaz. Omite las que ya existen.
+// con las mismas definiciones que genera la interfaz. En las que ya existen, solo agrega los campos que falten.
 //
 // Uso:
 //   NOCOBASE_URL=https://staging.ejemplo.cl NOCOBASE_EMAIL=... NOCOBASE_PASSWORD=... node scripts/crear-colecciones.mjs
@@ -255,6 +255,17 @@ async function existe(nombre) {
   return Array.isArray(data) && data.length > 0;
 }
 
+// En una colección que ya existe solo se agregan los campos que falten (por nombre); los demás no se tocan.
+async function completarCampos(coleccion) {
+  const actuales = await api(`collections/${coleccion.name}/fields:list`, { params: { paginate: 'false' } });
+  const nombres = new Set(actuales.map((campo) => campo.name));
+  const faltantes = coleccion.fields.filter((campo) => !nombres.has(campo.name));
+  for (const campo of faltantes) {
+    await api(`collections/${coleccion.name}/fields:create`, { values: campo });
+  }
+  console.log(`= ${coleccion.name}: ya existe${faltantes.length ? `, se agregan ${faltantes.map((c) => c.name).join(', ')}` : ''}`);
+}
+
 async function main() {
   TOKEN = await token();
   for (const requerida of ['fichasClinicas', 'paciente']) {
@@ -263,7 +274,7 @@ async function main() {
 
   for (const coleccion of COLECCIONES) {
     if (await existe(coleccion.name)) {
-      console.log(`= ${coleccion.name}: ya existe, se omite`);
+      await completarCampos(coleccion);
       continue;
     }
     const { fields, ...opciones } = coleccion;

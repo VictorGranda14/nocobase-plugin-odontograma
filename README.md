@@ -23,7 +23,7 @@ El dibujo viene del paquete propio [`@gransalud/odontograma-react`](https://gith
 
 ## Colecciones
 
-Deben existir antes de usar el bloque. `scripts/crear-colecciones.mjs` las crea por API con las mismas definiciones que la interfaz y omite las que ya existan:
+Deben existir antes de usar el bloque. `scripts/crear-colecciones.mjs` las crea por API con las mismas definiciones que la interfaz. En las que ya existan, solo agrega los campos que falten:
 
 ```bash
 NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave> node scripts/crear-colecciones.mjs
