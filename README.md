@@ -6,6 +6,7 @@ Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugar
 - Ver un odontograma (FDI, dentición permanente) pintado según las prestaciones del plan.
 - Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
+- Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
 - Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales).
 
 Lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
@@ -33,9 +34,11 @@ NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave
 | `prestacionesDentales` (catálogo) | `nombrePrestacion`, `alcance` (`diente`/`cuadrante`/`arcada`/`boca`), `precio` (CLP), `color`, `activo` |
 | `planesTratamiento` (plan) | `pacienteAsociado` → `paciente` (`FK_paciente`; inversa `planesTratamientoAsociados`) |
 | `fichaDental` (atención) | `fecha`, `observaciones`, `fichaClinicaAsociada` → `fichasClinicas` (`FK_fichaClinica`; inversa `fichasDentalesAsociadas`), `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `fichasDentalesAsociadas`) |
-| `prestacionesPlanTratamiento` (líneas) | `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `prestacionesAsociadas`), `fichaDentalRealizacion` → `fichaDental` (`FK_fichaDentalRealizacion`; inversa `prestacionesRealizadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `precio`, `estado` (`planificado`/`realizado`), `notas` |
+| `prestacionesPlanTratamiento` (líneas) | `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `prestacionesAsociadas`), `fichaDentalRealizacion` → `fichaDental` (`FK_fichaDentalRealizacion`; inversa `prestacionesRealizadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `precio`, `estado` (`planificado`/`realizado`), `seccion`, `notas` |
 
 Cada ficha dental (una atención) apunta a un plan, y un plan se comparte entre las atenciones de un mismo paciente. Las prestaciones pertenecen al plan; `fichaDentalRealizacion` guarda en qué atención se marcó como realizada.
+
+`seccion` es un texto libre: una sección existe mientras tenga prestaciones, y las prestaciones sin sección se muestran en «Sin sección». Las secciones aparecen en orden de creación, en la pantalla y en el PDF.
 
 `zona` vale `11`…`48` (diente), `C1`…`C4` (cuadrante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
 
