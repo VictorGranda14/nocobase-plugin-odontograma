@@ -6,7 +6,7 @@ import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
 import { useDescargarPresupuesto } from './presupuesto';
 import { Linea, NuevaLinea, useCatalogo } from './tipos';
-import { etiquetaZona, ordenZona } from './zonas';
+import { etiquetaZona } from './zonas';
 
 export interface OdontogramaBlockProps {
   readOnly?: boolean;
@@ -60,10 +60,8 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     { ready: !!planId, refreshDeps: [planId] },
   );
 
-  const lineas = useMemo(
-    () => [...(lineasReq.data?.data ?? [])].sort((a, b) => ordenZona(a.zona) - ordenZona(b.zona) || a.id - b.id),
-    [lineasReq.data],
-  );
+  // En orden de creación (por id); la tabla las agrupa por sección y ordena por zona.
+  const lineas = useMemo(() => lineasReq.data?.data ?? [], [lineasReq.data]);
 
   const ejecutar = async (accion: () => Promise<unknown>, exito?: string) => {
     try {
@@ -76,7 +74,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     }
   };
 
-  const agregar = ({ prestacion, zona, precio }: NuevaLinea) =>
+  const agregar = ({ prestacion, zona, precio, seccion }: NuevaLinea) =>
     ejecutar(
       () =>
         api.resource(COLECCION_LINEAS).create({
@@ -86,6 +84,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
             [CAMPOS_LINEA.zona]: zona,
             [CAMPOS_LINEA.precio]: precio,
             [CAMPOS_LINEA.estado]: 'planificado',
+            [CAMPOS_LINEA.seccion]: seccion,
           },
         }),
       `${prestacion.nombrePrestacion} agregada en ${etiquetaZona(zona).toLowerCase()}`,

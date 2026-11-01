@@ -15,7 +15,6 @@ import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
 import { useDescargarPresupuesto } from './presupuesto';
 import { Linea, NuevaLinea, useCatalogo } from './tipos';
-import { ordenZona } from './zonas';
 
 type Plan = { id?: number; [CAMPOS_PLAN.fkPaciente]?: number; prestacionesAsociadas?: Linea[] } & Record<string, any>;
 
@@ -48,18 +47,13 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
   const lineasPlan: Linea[] = value?.[CAMPOS_PLAN.lineas] ?? [];
 
   // Las prestaciones nuevas aún no tienen id: en la vista llevan uno negativo según su posición.
-  const lineas = useMemo(
-    () =>
-      lineasPlan
-        .map((l, i) => ({ ...l, id: l.id ?? -(i + 1) }))
-        .sort((a, b) => ordenZona(a.zona) - ordenZona(b.zona) || Math.abs(a.id) - Math.abs(b.id)),
-    [lineasPlan],
-  );
+  // Van en orden de creación (las cargadas por id, las nuevas al final); la tabla las agrupa y ordena.
+  const lineas = useMemo(() => lineasPlan.map((l, i) => ({ ...l, id: l.id ?? -(i + 1) })), [lineasPlan]);
   const indiceDe = (linea: Linea) => (linea.id < 0 ? -linea.id - 1 : lineasPlan.findIndex((l) => l.id === linea.id));
 
   const cambiarLineas = (nuevas: Linea[]) => onChange?.({ ...value, [CAMPOS_PLAN.lineas]: nuevas });
 
-  const agregar = ({ prestacion, zona, precio }: NuevaLinea) =>
+  const agregar = ({ prestacion, zona, precio, seccion }: NuevaLinea) =>
     cambiarLineas([
       ...lineasPlan,
       {
@@ -68,6 +62,7 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
         [CAMPOS_LINEA.zona]: zona,
         [CAMPOS_LINEA.precio]: precio,
         [CAMPOS_LINEA.estado]: 'planificado',
+        [CAMPOS_LINEA.seccion]: seccion,
       } as Linea,
     ]);
 

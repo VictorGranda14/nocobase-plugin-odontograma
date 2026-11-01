@@ -1,12 +1,14 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Button, Empty, Popconfirm, Table, Tag, Typography } from 'antd';
+import { Button, Empty, Popconfirm, Space, Table, Tag, Typography } from 'antd';
 import React from 'react';
 import { ESTADOS, Estado, clp, fechaCL } from './constants';
+import { SIN_SECCION, agruparPorSeccion } from './secciones';
 import { Linea } from './tipos';
 import { etiquetaZona, zonaAfectaDiente } from './zonas';
 
 interface TablaPrestacionesProps {
-  lineas: Linea[];
+  lineas: Linea[]; // en orden de creación
+  filtro?: (linea: Linea) => boolean; // filas visibles; los subtotales siguen contando todas
   diente: string | null;
   readOnly: boolean;
   cargando?: boolean;
@@ -14,8 +16,8 @@ interface TablaPrestacionesProps {
   onEliminar: (linea: Linea) => void;
 }
 
-// Detalle del plan; resalta las filas que afectan al diente seleccionado.
-export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({ lineas, diente, readOnly, cargando, onAlternarEstado, onEliminar }) => {
+// Detalle del plan agrupado por sección, con su subtotal; resalta las filas que afectan al diente seleccionado.
+export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({ lineas, filtro, diente, readOnly, cargando, onAlternarEstado, onEliminar }) => {
   const columnas = [
     { title: 'Zona', dataIndex: 'zona', render: (z: string) => etiquetaZona(z) },
     { title: 'Prestación', render: (_: unknown, l: Linea) => l.prestacionAsociada?.nombrePrestacion ?? '-' },
@@ -57,16 +59,36 @@ export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({ lineas, di
         ]),
   ];
 
-  return (
+  const tabla = (filas: Linea[]) => (
     <Table
       rowKey="id"
       size="small"
       pagination={false}
       loading={cargando}
-      dataSource={lineas}
+      dataSource={filtro ? filas.filter(filtro) : filas}
       columns={columnas}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Sin prestaciones" /> }}
       onRow={(l) => ({ style: diente && zonaAfectaDiente(l.zona, diente) ? { background: 'rgba(22, 119, 255, 0.06)' } : undefined })}
     />
+  );
+
+  const grupos = agruparPorSeccion(lineas);
+  // Sin secciones, la tabla es una sola, como antes de existir las secciones.
+  if (grupos.every((g) => g.nombre === null)) return tabla(grupos[0]?.lineas ?? []);
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      {grupos.map((grupo) => (
+        <div key={grupo.nombre ?? ''} data-seccion={grupo.nombre ?? ''}>
+          <Space style={{ marginBottom: 4 }}>
+            <Typography.Text strong>{grupo.nombre ?? SIN_SECCION}</Typography.Text>
+            <Typography.Text type="secondary">
+              Subtotal <span data-subtotal>{clp(grupo.subtotal)}</span>
+            </Typography.Text>
+          </Space>
+          {tabla(grupo.lineas)}
+        </div>
+      ))}
+    </Space>
   );
 };

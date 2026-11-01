@@ -219,3 +219,23 @@ test('descargar el presupuesto desde el bloque genera el PDF con el RUT del paci
   expect(descarga.suggestedFilename()).toMatch(`presupuesto-${rutPaciente.replaceAll('.', '')}-`);
   expect(descarga.suggestedFilename().endsWith('.pdf')).toBe(true);
 });
+
+test('el bloque muestra las secciones en orden de creación con su subtotal y agrega a la sección indicada', async ({ page, request }) => {
+  const [resina, frenillos] = await Promise.all(['Resina', 'Frenillos arcada'].map((nombre) => prestacion(request, nombre)));
+  const plan = await crearPlan(request);
+  await crearFicha(request, { plan });
+  await crearLinea(request, plan, frenillos, 'AS', 450000, { seccion: 'Ortodoncia' });
+  await crearLinea(request, plan, resina, '16', 35000, { seccion: 'Urgencia' });
+  await crearLinea(request, plan, resina, '26', 35000, { seccion: 'Urgencia' });
+
+  const popup = await abrirFicha(page);
+  const nombres = () => popup.locator('[data-seccion]').evaluateAll((nodos) => nodos.map((n) => n.getAttribute('data-seccion')));
+  await expect.poll(nombres).toEqual(['Ortodoncia', 'Urgencia']);
+  await expect(popup.locator('[data-seccion="Urgencia"] [data-subtotal]')).toHaveText('$70.000');
+
+  await popup.getByPlaceholder('Sección (opcional)').fill('Urgencia');
+  await agregarEnDiente(page, popup, '3.6', 'Resina');
+  await expect(popup.locator('[data-seccion="Urgencia"] .ant-table-row')).toHaveCount(3);
+  const lineas = await lineasDe(request, plan);
+  expect(lineas.find((l) => l.zona === '36').seccion).toBe('Urgencia');
+});

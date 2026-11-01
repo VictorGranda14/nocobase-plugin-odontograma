@@ -43,6 +43,7 @@ export const CAMPOS_LINEA = {
   zona: 'zona',
   precio: 'precio',
   estado: 'estado',
+  seccion: 'seccion',
   notas: 'notas',
 };
 

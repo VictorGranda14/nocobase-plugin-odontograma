@@ -3,6 +3,7 @@ import { Button, Col, Row, Space, Switch, Typography } from 'antd';
 import React, { useRef, useState } from 'react';
 import { AgregarPrestacion } from './AgregarPrestacion';
 import { DibujoPlan } from './DibujoPlan';
+import { nombresDeSecciones } from './secciones';
 import { TablaPrestaciones } from './TablaPrestaciones';
 import { Linea, NuevaLinea, Prestacion } from './tipos';
 import { TotalesPlan } from './TotalesPlan';
@@ -38,7 +39,7 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   const [soloDiente, setSoloDiente] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
 
-  const lineasVisibles = soloDiente && diente ? lineas.filter((l) => zonaAfectaDiente(l.zona, diente)) : lineas;
+  const filtro = soloDiente && diente ? (l: Linea) => zonaAfectaDiente(l.zona, diente) : undefined;
 
   const descargarPdf = async () => {
     setGenerandoPdf(true);
@@ -67,7 +68,7 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
             {diente ? `Diente ${diente} · ${tipoDeDiente(diente)}` : 'Selecciona un diente en el odontograma'}
           </Typography.Title>
 
-          {!readOnly && <AgregarPrestacion catalogo={catalogo} cargando={cargandoCatalogo} diente={diente} onAgregar={onAgregar} />}
+          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} diente={diente} onAgregar={onAgregar} />}
 
           <Space>
             <Switch size="small" checked={soloDiente} disabled={!diente} onChange={setSoloDiente} />
@@ -75,7 +76,8 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
           </Space>
 
           <TablaPrestaciones
-            lineas={lineasVisibles}
+            lineas={lineas}
+            filtro={filtro}
             diente={diente}
             readOnly={readOnly}
             cargando={cargandoLineas}

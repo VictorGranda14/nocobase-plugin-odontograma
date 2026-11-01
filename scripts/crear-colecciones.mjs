@@ -243,6 +243,8 @@ const COLECCIONES = [
         ],
         { defaultValue: 'planificado' },
       ),
+      // Agrupa las prestaciones del plan por etapa; sin valor, quedan en «Sin sección».
+      texto('seccion', 'Sección'),
       textoLargo('notas', 'Notas'),
     ],
   },

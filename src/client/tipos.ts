@@ -15,6 +15,7 @@ export interface Linea {
   zona: string;
   precio: number;
   estado: Estado;
+  seccion?: string | null;
   notas?: string;
   FK_prestacion?: number;
   prestacionAsociada?: Prestacion;
@@ -26,6 +27,7 @@ export interface NuevaLinea {
   prestacion: Prestacion;
   zona: string;
   precio: number;
+  seccion: string | null;
 }
 
 // Catálogo de prestaciones activas, ordenado por nombre.

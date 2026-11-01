@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, InputNumber, Segmented, Select, Space, Typography } from 'antd';
+import { AutoComplete, Button, Input, InputNumber, Segmented, Select, Space, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { clp } from './constants';
 import { NuevaLinea, Prestacion } from './tipos';
@@ -7,16 +7,19 @@ import { ALCANCES, ARCADAS, Alcance, CUADRANTES, zonaPorDefecto } from './zonas'
 
 interface AgregarPrestacionProps {
   catalogo: Prestacion[];
+  secciones: string[];
   cargando?: boolean;
   diente: string | null;
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
 }
 
 // Prestación del catálogo, zona según su alcance (diente seleccionado, cuadrante, arcada o boca) y precio.
-export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, cargando, diente, onAgregar }) => {
+export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, diente, onAgregar }) => {
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
   const [zona, setZona] = useState<string | null>(null);
   const [precio, setPrecio] = useState<number | null>(null);
+  // Se conserva entre una prestación y otra, para agregar varias a la misma sección.
+  const [seccion, setSeccion] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   const prestacion = catalogo.find((p) => p.id === prestacionId);
@@ -40,7 +43,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
     if (!prestacion || !zonaEfectiva || precio == null) return;
     setGuardando(true);
     try {
-      await onAgregar({ prestacion, zona: zonaEfectiva, precio });
+      await onAgregar({ prestacion, zona: zonaEfectiva, precio, seccion: seccion.trim() || null });
     } finally {
       setGuardando(false);
     }
@@ -72,6 +75,16 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
           onChange={elegirPrestacion}
           notFoundContent="No hay prestaciones activas en el catálogo"
         />
+        {/* Escribir un nombre nuevo crea la sección; existe mientras tenga prestaciones. */}
+        <AutoComplete
+          style={{ minWidth: 200 }}
+          value={seccion}
+          onChange={(v) => setSeccion(v ?? '')}
+          options={secciones.map((s) => ({ value: s }))}
+          filterOption={(texto, opcion) => String(opcion?.value).toLowerCase().includes(texto.toLowerCase())}
+        >
+          <Input placeholder="Sección (opcional)" allowClear />
+        </AutoComplete>
         {alcance === 'cuadrante' && (
           <Segmented
             value={zona}

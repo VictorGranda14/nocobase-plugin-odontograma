@@ -272,3 +272,47 @@ test('descargar el presupuesto desde el formulario genera el PDF del paciente co
   expect(contenido).toContain('Control en 6 meses');
   await cerrarSinGuardar(page, drawer);
 });
+
+// Secciones de la vista en orden, con su texto (nombre y subtotal).
+const secciones = (vista) => vista.locator('[data-seccion]').evaluateAll((nodos) => nodos.map((n) => n.getAttribute('data-seccion')));
+const subtotal = (vista, nombre) => vista.locator(`[data-seccion="${nombre}"] [data-subtotal]`);
+
+test('crear secciones agrupa las prestaciones con su subtotal y se guardan con la ficha clínica', async ({ page, request }) => {
+  const drawer = await nuevaFichaClinica(page);
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const vista = drawer.locator('[data-odontograma]');
+  const seccion = vista.getByPlaceholder('Sección (opcional)');
+
+  await seccion.fill('Etapa 1');
+  await agregarEnDiente(page, vista, '1.6', 'Resina');
+  await agregarEnDiente(page, vista, '2.6', 'Resina');
+  await seccion.fill('Etapa 2');
+  await agregarEnDiente(page, vista, '3.6', 'Resina');
+  await seccion.fill('');
+  await agregarEnDiente(page, vista, '4.6', 'Resina');
+
+  await expect.poll(() => secciones(vista)).toEqual(['Etapa 1', 'Etapa 2', '']);
+  await expect(subtotal(vista, 'Etapa 1')).toHaveText('$70.000');
+  await expect(subtotal(vista, 'Etapa 2')).toHaveText('$35.000');
+  await expect(vista.locator('[data-seccion=""]')).toContainText('Sin sección');
+  await enviar(page, drawer);
+
+  const [fichaClinica] = await nuevas(request, 'fichasClinicas');
+  const [ficha] = await listar(request, 'fichaDental', { FK_fichaClinica: fichaClinica.id });
+  const lineas = await listar(request, 'prestacionesPlanTratamiento', { FK_planTratamiento: ficha.FK_planTratamiento });
+  expect(lineas.map((l) => [l.zona, l.seccion ?? null])).toEqual([
+    ['16', 'Etapa 1'],
+    ['26', 'Etapa 1'],
+    ['36', 'Etapa 2'],
+    ['46', null],
+  ]);
+
+  // Al reabrir se ven las mismas secciones, en orden de creación.
+  await expect(drawer).toBeHidden();
+  const fila = page.locator(`.ant-table-row[data-row-key="${fichaClinica.id}"]`);
+  await expect(fila).toBeVisible();
+  await fila.getByText('Editar', { exact: true }).click();
+  const reabierta = page.locator('.ant-drawer-content').last().locator('[data-odontograma]');
+  await expect.poll(() => secciones(reabierta)).toEqual(['Etapa 1', 'Etapa 2', '']);
+  await expect(subtotal(reabierta, 'Etapa 1')).toHaveText('$70.000');
+});
