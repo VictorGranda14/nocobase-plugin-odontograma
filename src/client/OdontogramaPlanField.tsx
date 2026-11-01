@@ -2,9 +2,18 @@ import { observer, useField, useForm } from '@formily/react';
 import { useAPIClient } from '@nocobase/client';
 import { Alert } from 'antd';
 import React, { useEffect, useMemo } from 'react';
-import { CAMPOS_FICHA_CLINICA, CAMPOS_LINEA, CAMPOS_PLAN, COLECCION_LINEAS } from './constants';
+import {
+  CAMPOS_FICHA,
+  CAMPOS_FICHA_CLINICA,
+  CAMPOS_LINEA,
+  CAMPOS_PLAN,
+  COLECCION_FUNCIONARIO,
+  COLECCION_LINEAS,
+  COLECCION_PACIENTE,
+} from './constants';
 import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
+import { useDescargarPresupuesto } from './presupuesto';
 import { Linea, NuevaLinea, useCatalogo } from './tipos';
 import { ordenZona } from './zonas';
 
@@ -23,6 +32,7 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
   const field = useField();
   const form = useForm(); // formulario de la ficha clínica
   const { catalogo, cargando } = useCatalogo();
+  const descargarPresupuesto = useDescargarPresupuesto();
   const readOnly = !!(field.disabled || field.readPretty);
 
   // Formily inicia los campos de objeto en {}: sin plan elegido se deja en null, o NocoBase crearía un plan vacío al guardar.
@@ -33,6 +43,8 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
 
   const pacienteId: number | null =
     form.values?.[CAMPOS_FICHA_CLINICA.fkPaciente] ?? form.values?.[CAMPOS_FICHA_CLINICA.paciente]?.id ?? null;
+  const funcionarioId: number | null =
+    form.values?.[CAMPOS_FICHA_CLINICA.fkFuncionario] ?? form.values?.[CAMPOS_FICHA_CLINICA.funcionario]?.id ?? null;
   const lineasPlan: Linea[] = value?.[CAMPOS_PLAN.lineas] ?? [];
 
   // Las prestaciones nuevas aún no tienen id: en la vista llevan uno negativo según su posición.
@@ -89,6 +101,27 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
     onChange?.({ id: planId, [CAMPOS_PLAN.lineas]: respuesta?.data?.data ?? [] });
   };
 
+  // Paciente y profesional salen de la ficha clínica; fecha y observaciones, de esta ficha dental.
+  const descargarPdf = async (svg: SVGSVGElement | null) => {
+    const obtener = async (recurso: string, id: number | null) =>
+      id ? (await api.resource(recurso).get({ filterByTk: id }))?.data?.data : null;
+    try {
+      const [paciente, funcionario] = await Promise.all([
+        obtener(COLECCION_PACIENTE, pacienteId),
+        obtener(COLECCION_FUNCIONARIO, funcionarioId),
+      ]);
+      // path es la ruta de datos (address incluye los nodos de diseño Grid, Row, Col).
+      const ficha = form.getValuesIn(field.path.parent()) ?? {};
+      await descargarPresupuesto(
+        { paciente, funcionario, fecha: ficha[CAMPOS_FICHA.fecha], observaciones: ficha[CAMPOS_FICHA.observaciones], lineas },
+        svg,
+      );
+    } catch (error) {
+      // El cliente de NocoBase ya notifica los errores de la API.
+      console.error('[odontograma] PDF', error);
+    }
+  };
+
   if (sinPlan) {
     if (!readOnly && !pacienteId) {
       return <Alert type="info" showIcon message="Elige el paciente de la ficha clínica para crear o continuar su plan de tratamiento." />;
@@ -114,6 +147,7 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
       onAgregar={agregar}
       onAlternarEstado={alternarEstado}
       onEliminar={eliminar}
+      onDescargarPdf={descargarPdf}
     />
   );
 });

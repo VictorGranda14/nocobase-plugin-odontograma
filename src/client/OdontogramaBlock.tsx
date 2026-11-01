@@ -1,9 +1,10 @@
 import { useAPIClient, useCollection, useCollectionRecordData, useCurrentPopupRecord, useRequest, withDynamicSchemaProps } from '@nocobase/client';
 import { Alert, App, Spin } from 'antd';
 import React, { useMemo } from 'react';
-import { CAMPOS_FICHA, CAMPOS_LINEA, CAMPOS_PLAN, COLECCION_FICHA, COLECCION_LINEAS, COLECCION_PLAN, fechaCL } from './constants';
+import { CAMPOS_FICHA, CAMPOS_LINEA, CAMPOS_PLAN, COLECCION_FICHA, COLECCION_LINEAS, COLECCION_PLAN } from './constants';
 import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
+import { useDescargarPresupuesto } from './presupuesto';
 import { Linea, NuevaLinea, useCatalogo } from './tipos';
 import { etiquetaZona, ordenZona } from './zonas';
 
@@ -26,6 +27,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
   const api = useAPIClient();
   const { message } = App.useApp();
   const { catalogo, cargando: cargandoCatalogo } = useCatalogo();
+  const descargarPresupuesto = useDescargarPresupuesto();
 
   // La ficha dental es la atención; las prestaciones pertenecen a su plan de tratamiento.
   const fichaReq = useRequest<{ data: Record<string, any> }>(
@@ -115,35 +117,17 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     await asociarPlan(respuesta?.data?.data?.id);
   };
 
-  const descargarPdf = async (svg: SVGSVGElement | null) => {
-    try {
-      const { generarPresupuestoPdf } = await import('./pdf');
-      const paciente = ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente] ?? {};
-      const funcionario = ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.funcionario] ?? {};
-      const nombrePaciente =
-        paciente.nombreCompleto || [paciente.nomPaciente, paciente.apellido1Pac, paciente.apellido2Pac].filter(Boolean).join(' ');
-      const nombreFuncionario =
-        funcionario.nombreCompleto || [funcionario.nombre, funcionario.primerApellido, funcionario.segundoApellido].filter(Boolean).join(' ');
-      const { conImagen } = await generarPresupuestoPdf({
-        paciente: nombrePaciente,
-        rut: paciente.rutPaciente,
-        profesional: nombreFuncionario,
-        fechaAtencion: fechaCL(ficha?.[CAMPOS_FICHA.fecha]) || undefined,
+  const descargarPdf = (svg: SVGSVGElement | null) =>
+    descargarPresupuesto(
+      {
+        paciente: ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente],
+        funcionario: ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.funcionario],
+        fecha: ficha?.[CAMPOS_FICHA.fecha],
         observaciones: ficha?.[CAMPOS_FICHA.observaciones],
-        lineas: lineas.map((l) => ({
-          zona: l.zona,
-          prestacion: l.prestacionAsociada?.nombrePrestacion ?? '-',
-          estado: l.estado,
-          precio: Number(l.precio) || 0,
-        })),
-        svg,
-      });
-      if (!conImagen) message.warning('El PDF se generó sin la imagen del odontograma.');
-    } catch (error) {
-      console.error('[odontograma] PDF', error);
-      message.error('No se pudo generar el PDF.');
-    }
-  };
+        lineas,
+      },
+      svg,
+    );
 
   if (!fichaId) {
     return (

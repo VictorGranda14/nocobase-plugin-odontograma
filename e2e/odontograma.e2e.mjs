@@ -202,3 +202,20 @@ test('marcar realizada una prestación registra la atención y la tabla muestra 
   await expect(fila).not.toContainText('30-10-2026');
   expect((await api(request, 'prestacionesPlanTratamiento:get', { params: { filterByTk: linea.id } })).FK_fichaDentalRealizacion).toBeNull();
 });
+
+test('descargar el presupuesto desde el bloque genera el PDF con el RUT del paciente', async ({ page, request }) => {
+  const resina = await prestacion(request, 'Resina');
+  const plan = await crearPlan(request);
+  await crearFicha(request, { plan });
+  await crearLinea(request, plan, resina, '16', 35000);
+  const { rutPaciente } = await api(request, 'paciente:get', { params: { filterByTk: pacienteId } });
+
+  const popup = await abrirFicha(page);
+  await expect(popup.locator('.ant-table-row')).toHaveCount(1);
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    popup.getByRole('button', { name: /Descargar presupuesto/ }).click(),
+  ]);
+  expect(descarga.suggestedFilename()).toMatch(`presupuesto-${rutPaciente.replaceAll('.', '')}-`);
+  expect(descarga.suggestedFilename().endsWith('.pdf')).toBe(true);
+});

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import fs from 'node:fs/promises';
 
 // Odontograma como campo del subformulario de la ficha dental, dentro del formulario de la ficha clínica:
 // nada se graba hasta pulsar «Enviar», y entonces se graba todo junto.
@@ -251,4 +252,23 @@ test('cancelar la edición de una ficha clínica deja el plan como estaba', asyn
     ['16', 'planificado'],
     ['26', 'planificado'],
   ]);
+});
+
+test('descargar el presupuesto desde el formulario genera el PDF del paciente con la fecha y las observaciones de la atención', async ({ page }) => {
+  const drawer = await nuevaFichaClinica(page, '2026-10-15');
+  await formItem(drawer, 'Observaciones').locator('textarea').fill('Control en 6 meses');
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const vista = drawer.locator('[data-odontograma]');
+  await agregarEnDiente(page, vista, '1.6', 'Resina');
+
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    vista.getByRole('button', { name: /Descargar presupuesto/ }).click(),
+  ]);
+  expect(descarga.suggestedFilename()).toMatch(`presupuesto-${rutPaciente.replaceAll('.', '')}-`);
+  // jsPDF no comprime el texto: se puede buscar en el archivo.
+  const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
+  expect(contenido).toContain('15-10-2026');
+  expect(contenido).toContain('Control en 6 meses');
+  await cerrarSinGuardar(page, drawer);
 });

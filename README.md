@@ -74,10 +74,11 @@ Si la ficha dental aún no tiene plan, el bloque ofrece **Crear plan nuevo** o *
 
 El paciente se toma del campo `pacienteAsociado` (o `FK_paciente`) de la ficha clínica. Mientras no se elija paciente, el campo lo pide antes de crear o continuar un plan.
 
+El campo también descarga el presupuesto en PDF, aun antes de guardar. Usa el paciente y el profesional de la ficha clínica, y la fecha y las observaciones de la ficha dental.
+
 ## Limitaciones
 
 - Solo dientes permanentes y diente completo (caras y dientes temporales: issues #2 y #5).
 - Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante > arcada). El tooltip y la tabla muestran todas las prestaciones que lo afectan.
 - La imagen del PDF no incluye la leyenda de colores; la tabla del presupuesto detalla cada línea.
 - El plan de una atención no se cambia desde el bloque ni desde el campo una vez elegido.
-- El PDF solo se descarga desde el bloque.

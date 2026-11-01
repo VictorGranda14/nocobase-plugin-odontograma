@@ -9,6 +9,8 @@ export const COLECCION_FICHA = 'fichaDental';
 export const COLECCION_PLAN = 'planesTratamiento';
 export const COLECCION_LINEAS = 'prestacionesPlanTratamiento';
 export const COLECCION_CATALOGO = 'prestacionesDentales';
+export const COLECCION_PACIENTE = 'paciente';
+export const COLECCION_FUNCIONARIO = 'funcionarioSalud';
 
 export const CAMPOS_FICHA = {
   fecha: 'fecha',
@@ -23,6 +25,8 @@ export const CAMPOS_FICHA = {
 export const CAMPOS_FICHA_CLINICA = {
   fkPaciente: 'FK_paciente',
   paciente: 'pacienteAsociado',
+  fkFuncionario: 'FK_funcionario',
+  funcionario: 'funcionarioAsociado',
 };
 
 export const CAMPOS_PLAN = {
