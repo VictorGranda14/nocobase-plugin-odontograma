@@ -188,15 +188,16 @@ test('cerrar el formulario sin guardar no graba ficha, plan ni prestaciones', as
   }
 });
 
-// Ficha clínica de Odontología guardada, con su ficha dental y un plan con 2 prestaciones planificadas (16 y 26).
-const fichaClinicaConPlan = async (request) => {
+// Ficha clínica de Odontología guardada, con su ficha dental y un plan con prestaciones planificadas de Resina
+// (por defecto 16 y 26, sin sección).
+const fichaClinicaConPlan = async (request, zonas = [['16'], ['26']]) => {
   const resina = await prestacion(request, 'Resina');
   const plan = await api(request, 'planesTratamiento:create', { values: { FK_paciente: pacienteId } });
   const lineas = [];
-  for (const zona of ['16', '26']) {
+  for (const [zona, seccion = null] of zonas) {
     lineas.push(
       await api(request, 'prestacionesPlanTratamiento:create', {
-        values: { FK_planTratamiento: plan.id, FK_prestacion: resina.id, zona, precio: 35000, estado: 'planificado' },
+        values: { FK_planTratamiento: plan.id, FK_prestacion: resina.id, zona, precio: 35000, estado: 'planificado', seccion },
       }),
     );
   }
@@ -207,12 +208,12 @@ const fichaClinicaConPlan = async (request) => {
   return { fichaClinica, ficha, plan, lineas };
 };
 
-const editarFichaClinica = async (page, id) => {
+const editarFichaClinica = async (page, id, filas = 2) => {
   await abrirPagina(page);
   await page.locator(`.ant-table-row[data-row-key="${id}"]`).getByText('Editar', { exact: true }).click();
   const drawer = page.locator('.ant-drawer-content').last();
   const vista = drawer.locator('[data-odontograma]');
-  await expect(vista.locator('.ant-table-row')).toHaveCount(2);
+  await expect(vista.locator('.ant-table-row')).toHaveCount(filas);
   return { drawer, vista };
 };
 
@@ -315,4 +316,47 @@ test('crear secciones agrupa las prestaciones con su subtotal y se guardan con l
   const reabierta = page.locator('.ant-drawer-content').last().locator('[data-odontograma]');
   await expect.poll(() => secciones(reabierta)).toEqual(['Etapa 1', 'Etapa 2', '']);
   await expect(subtotal(reabierta, 'Etapa 1')).toHaveText('$70.000');
+});
+
+// Menú de una sección: «Renombrar» o «Eliminar».
+const menuSeccion = async (page, vista, nombre, opcion) => {
+  await vista.getByRole('button', { name: `Opciones de la sección ${nombre}` }).click();
+  await page.locator('.ant-dropdown:visible').getByText(opcion, { exact: true }).click();
+};
+
+const renombrarSeccion = async (page, vista, nombre, nuevo) => {
+  await menuSeccion(page, vista, nombre, 'Renombrar');
+  const dialogo = page.locator('.ant-modal:visible');
+  await dialogo.getByRole('textbox').fill(nuevo);
+  await dialogo.getByRole('button', { name: 'Renombrar' }).click();
+};
+
+test('renombrar y eliminar secciones desde su menú se guarda con la ficha clínica', async ({ page, request }) => {
+  const { fichaClinica, plan } = await fichaClinicaConPlan(request, [['16', 'Etapa 1'], ['26', 'Etapa 1'], ['36', 'Etapa 2']]);
+  const { drawer, vista } = await editarFichaClinica(page, fichaClinica.id, 3);
+
+  // Un nombre ya usado se rechaza.
+  await renombrarSeccion(page, vista, 'Etapa 1', 'Etapa 2');
+  await expect(page.getByText('Ya existe la sección «Etapa 2»')).toBeVisible();
+  await page.locator('.ant-modal:visible').getByRole('button', { name: 'Cancelar' }).click();
+
+  await renombrarSeccion(page, vista, 'Etapa 1', 'Urgencia');
+  await expect.poll(() => secciones(vista)).toEqual(['Urgencia', 'Etapa 2']);
+
+  // Cancelar la eliminación no cambia nada; confirmarla avisa cuántas prestaciones se borran.
+  await menuSeccion(page, vista, 'Etapa 2', 'Eliminar');
+  await page.locator('.ant-modal-confirm:visible').getByRole('button', { name: 'Cancelar' }).click();
+  await expect(vista.locator('.ant-table-row')).toHaveCount(3);
+  await menuSeccion(page, vista, 'Etapa 2', 'Eliminar');
+  const confirmacion = page.locator('.ant-modal-confirm:visible');
+  await expect(confirmacion).toContainText('Se eliminará 1 prestación');
+  await confirmacion.getByRole('button', { name: 'Eliminar' }).click();
+  await expect.poll(() => secciones(vista)).toEqual(['Urgencia']);
+  await enviar(page, drawer);
+
+  const lineas = await listar(request, 'prestacionesPlanTratamiento', { FK_planTratamiento: plan.id });
+  expect(lineas.map((l) => [l.zona, l.seccion])).toEqual([
+    ['16', 'Urgencia'],
+    ['26', 'Urgencia'],
+  ]);
 });

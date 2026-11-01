@@ -86,6 +86,11 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
     cambiarLineas(lineasPlan.filter((_, j) => j !== i));
   };
 
+  const renombrarSeccion = (nombre: string, nuevo: string) =>
+    cambiarLineas(lineasPlan.map((l) => (l.seccion?.trim() === nombre ? { ...l, [CAMPOS_LINEA.seccion]: nuevo } : l)));
+  // Las prestaciones quitadas del plan las elimina el servidor al guardar.
+  const eliminarSeccion = (nombre: string) => cambiarLineas(lineasPlan.filter((l) => l.seccion?.trim() !== nombre));
+
   const continuar = async (planId: number) => {
     const respuesta = await api.resource(COLECCION_LINEAS).list({
       filter: { [CAMPOS_LINEA.fkPlan]: planId },
@@ -142,6 +147,8 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
       onAgregar={agregar}
       onAlternarEstado={alternarEstado}
       onEliminar={eliminar}
+      onRenombrarSeccion={renombrarSeccion}
+      onEliminarSeccion={eliminarSeccion}
       onDescargarPdf={descargarPdf}
     />
   );

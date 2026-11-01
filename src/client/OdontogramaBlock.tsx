@@ -106,6 +106,15 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
 
   const eliminar = (linea: Linea) => ejecutar(() => api.resource(COLECCION_LINEAS).destroy({ filterByTk: linea.id }));
 
+  // Las secciones son texto en cada prestación: se cambian una a una, y se borran siempre por id.
+  const deSeccion = (nombre: string) => lineas.filter((l) => l.seccion?.trim() === nombre);
+  const renombrarSeccion = (nombre: string, nuevo: string) =>
+    ejecutar(() =>
+      Promise.all(deSeccion(nombre).map((l) => api.resource(COLECCION_LINEAS).update({ filterByTk: l.id, values: { [CAMPOS_LINEA.seccion]: nuevo } }))),
+    );
+  const eliminarSeccion = (nombre: string) =>
+    ejecutar(() => Promise.all(deSeccion(nombre).map((l) => api.resource(COLECCION_LINEAS).destroy({ filterByTk: l.id }))));
+
   const asociarPlan = async (id: number) => {
     await api.resource(COLECCION_FICHA).update({ filterByTk: fichaId, values: { [CAMPOS_FICHA.fkPlan]: id } });
     await fichaReq.refresh();
@@ -165,6 +174,8 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       onAgregar={agregar}
       onAlternarEstado={alternarEstado}
       onEliminar={eliminar}
+      onRenombrarSeccion={renombrarSeccion}
+      onEliminarSeccion={eliminarSeccion}
       onDescargarPdf={descargarPdf}
     />
   );

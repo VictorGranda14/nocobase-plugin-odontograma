@@ -18,6 +18,8 @@ interface PlanOdontogramaProps {
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
   onAlternarEstado: (linea: Linea) => void;
   onEliminar: (linea: Linea) => void;
+  onRenombrarSeccion: (nombre: string, nuevo: string) => void;
+  onEliminarSeccion: (nombre: string) => void;
   // Si se indica, muestra el botón del presupuesto en PDF; recibe el SVG del odontograma.
   onDescargarPdf?: (svg: SVGSVGElement | null) => Promise<void>;
 }
@@ -32,6 +34,8 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   onAgregar,
   onAlternarEstado,
   onEliminar,
+  onRenombrarSeccion,
+  onEliminarSeccion,
   onDescargarPdf,
 }) => {
   const contenedor = useRef<HTMLDivElement>(null);
@@ -83,6 +87,8 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
             cargando={cargandoLineas}
             onAlternarEstado={onAlternarEstado}
             onEliminar={onEliminar}
+            onRenombrarSeccion={onRenombrarSeccion}
+            onEliminarSeccion={onEliminarSeccion}
           />
 
           <TotalesPlan
