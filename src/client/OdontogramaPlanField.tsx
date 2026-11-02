@@ -102,7 +102,7 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
   };
 
   // Paciente y profesional salen de la ficha clínica; fecha y observaciones, de esta ficha dental.
-  const descargarPdf = async (svg: SVGSVGElement | null) => {
+  const descargarPdf = async (svgs: SVGSVGElement[]) => {
     const obtener = async (recurso: string, id: number | null) =>
       id ? (await api.resource(recurso).get({ filterByTk: id }))?.data?.data : null;
     try {
@@ -114,7 +114,7 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
       const ficha = form.getValuesIn(field.path.parent()) ?? {};
       await descargarPresupuesto(
         { paciente, funcionario, fecha: ficha[CAMPOS_FICHA.fecha], observaciones: ficha[CAMPOS_FICHA.observaciones], lineas },
-        svg,
+        svgs,
       );
     } catch (error) {
       // El cliente de NocoBase ya notifica los errores de la API.

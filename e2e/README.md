@@ -28,8 +28,8 @@ npx playwright test --config packages/plugins/@gransalud/plugin-odontograma/e2e/
 Estructura:
 
 - `apoyo.mjs`: credenciales, `api` y sesión (común a ambas carpetas).
-- `bloque/`: bloque Odontograma en el popup «Ver» de una ficha dental. `dibujo`, `planes`, `estados`, `pdf` y `secciones`; su `apoyo.mjs` tiene los helpers y `registrarHooks()`.
-- `formulario/`: campo del odontograma en el formulario de la ficha clínica. `crear`, `guardar-cancelar`, `secciones` y `pdf`; su `apoyo.mjs` tiene los helpers y `registrarHooks()`.
+- `bloque/`: bloque Odontograma en el popup «Ver» de una ficha dental. `dibujo`, `denticion-temporal`, `planes`, `estados`, `pdf` y `secciones`; su `apoyo.mjs` tiene los helpers y `registrarHooks()`.
+- `formulario/`: campo del odontograma en el formulario de la ficha clínica. `crear`, `guardar-cancelar`, `denticion-temporal`, `secciones` y `pdf`; su `apoyo.mjs` tiene los helpers y `registrarHooks()`.
 
 Cada archivo de pruebas llama a `registrarHooks()` (el `beforeEach` de sesión y el `afterEach` de limpieza). El estado que comparten los helpers vive en el objeto `ctx` exportado por el `apoyo.mjs` de cada carpeta. Los módulos de apoyo no terminan en `.e2e.mjs`, así que Playwright no los toma como pruebas.
 

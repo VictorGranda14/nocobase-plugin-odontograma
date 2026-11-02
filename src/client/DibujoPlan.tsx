@@ -1,6 +1,6 @@
-import { Odontograma } from '@gransalud/odontograma-react';
-import { Space, Tag, Typography } from 'antd';
-import React, { useMemo } from 'react';
+import { Denticion, Odontograma } from '@gransalud/odontograma-react';
+import { Space, Tabs, Tag, Typography } from 'antd';
+import React, { useMemo, useState } from 'react';
 import { COLORES_POR_DEFECTO } from './constants';
 import { Linea } from './tipos';
 import { Alcance, BOCA, alcanceDeZona, dientesDeZona, etiquetaZona, tipoDeDiente, zonaAfectaDiente } from './zonas';
@@ -11,10 +11,13 @@ interface DibujoPlanProps {
   lineas: Linea[];
   diente: string | null;
   onSeleccionarDiente: (diente: string) => void;
+  // Denticiones que se dibujan fuera de pantalla, sin selección, para capturarlas en el PDF.
+  capturar?: Denticion[];
 }
 
 // Odontograma pintado con las prestaciones del plan, con las de boca completa arriba y las referencias abajo.
-export const DibujoPlan: React.FC<DibujoPlanProps> = ({ lineas, diente, onSeleccionarDiente }) => {
+export const DibujoPlan: React.FC<DibujoPlanProps> = ({ lineas, diente, onSeleccionarDiente, capturar = [] }) => {
+  const [denticion, setDenticion] = useState<Denticion>('permanente');
   const colorDe = useMemo(() => {
     const colores = new Map<number, string>();
     const ids = Array.from(new Set(lineas.map((l) => l.FK_prestacion).filter(Boolean)));
@@ -53,9 +56,18 @@ export const DibujoPlan: React.FC<DibujoPlanProps> = ({ lineas, diente, onSelecc
           ))}
         </Space>
       )}
+      <Tabs
+        activeKey={denticion}
+        onChange={(clave) => setDenticion(clave as Denticion)}
+        items={[
+          { key: 'permanente', label: 'Permanente' },
+          { key: 'temporal', label: 'Temporal' },
+        ]}
+      />
       {/* Siempre seleccionable, también en solo lectura, para consultar cada diente. */}
       <div style={{ width: '80%', margin: '0 auto' }}>
         <Odontograma
+          denticion={denticion}
           dientesPintados={dientesPintados}
           dienteSeleccionado={diente}
           onSeleccionarDiente={onSeleccionarDiente}
@@ -82,6 +94,15 @@ export const DibujoPlan: React.FC<DibujoPlanProps> = ({ lineas, diente, onSelecc
             </Tag>
           ))}
         </Space>
+      )}
+      {capturar.length > 0 && (
+        <div aria-hidden style={{ position: 'fixed', left: -10000, top: 0, width: 800 }}>
+          {capturar.map((d) => (
+            <div key={d} data-captura-pdf={d}>
+              <Odontograma denticion={d} dientesPintados={dientesPintados} />
+            </div>
+          ))}
+        </div>
       )}
     </>
   );

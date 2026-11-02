@@ -20,10 +20,12 @@ export interface DatosPresupuesto {
   fechaAtencion?: string;
   observaciones?: string;
   lineas: LineaPresupuesto[];
-  svg?: SVGSVGElement | null;
+  // Un odontograma por dentición, en orden.
+  svgs: SVGSVGElement[];
 }
 
 export interface ResultadoPdf {
+  // Falso si alguno de los odontogramas no se pudo incluir.
   conImagen: boolean;
 }
 
@@ -123,16 +125,16 @@ export async function generarPresupuestoPdf(datos: DatosPresupuesto): Promise<Re
   });
   y += 2;
 
-  let conImagen = false;
-  if (datos.svg) {
+  let conImagen = datos.svgs.length > 0;
+  for (const svg of datos.svgs) {
     try {
-      const { dataUrl, ancho, alto } = await svgAPng(datos.svg);
+      const { dataUrl, ancho, alto } = await svgAPng(svg);
       const altoImagen = Math.min(ALTO_MAX_IMAGEN, ((anchoPagina - 2 * MARGEN) * alto) / ancho);
       const anchoImagen = (ancho / alto) * altoImagen;
       doc.addImage(dataUrl, 'PNG', (anchoPagina - anchoImagen) / 2, y, anchoImagen, altoImagen, undefined, 'FAST');
       y += altoImagen + 4;
-      conImagen = true;
     } catch (error) {
+      conImagen = false;
       console.warn('[odontograma] PDF sin imagen:', error);
     }
   }

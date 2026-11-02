@@ -21,7 +21,7 @@ const nombreFuncionario = (f: Record<string, any> = {}) =>
 export const useDescargarPresupuesto = () => {
   const { message } = App.useApp();
   return useCallback(
-    async ({ paciente, funcionario, fecha, observaciones, lineas }: DatosAtencion, svg: SVGSVGElement | null) => {
+    async ({ paciente, funcionario, fecha, observaciones, lineas }: DatosAtencion, svgs: SVGSVGElement[]) => {
       try {
         const { generarPresupuestoPdf } = await import('./pdf');
         const { conImagen } = await generarPresupuestoPdf({
@@ -37,9 +37,9 @@ export const useDescargarPresupuesto = () => {
             precio: Number(l.precio) || 0,
             seccion: l.seccion,
           })),
-          svg,
+          svgs,
         });
-        if (!conImagen) message.warning('El PDF se generó sin la imagen del odontograma.');
+        if (!conImagen) message.warning('El PDF se generó sin una o más imágenes del odontograma.');
       } catch (error) {
         console.error('[odontograma] PDF', error);
         message.error('No se pudo generar el PDF.');

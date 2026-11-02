@@ -1,6 +1,7 @@
-// Zonas de la boca en notación FDI (solo dentición permanente).
-//   Diente:    '11' … '48'
-//   Cuadrante: 'C1' (sup. derecho), 'C2' (sup. izquierdo), 'C3' (inf. izquierdo), 'C4' (inf. derecho)
+// Zonas de la boca en notación FDI.
+//   Diente:    '11' … '48' (permanentes), '51' … '85' (temporales)
+//   Cuadrante: 'C1' (sup. derecho), 'C2' (sup. izquierdo), 'C3' (inf. izquierdo), 'C4' (inf. derecho),
+//              cada uno con sus dientes temporales (cuadrantes FDI 5, 6, 7 y 8)
 //   Arcada:    'AS' (superior, C1 + C2), 'AI' (inferior, C3 + C4)
 //   Boca:      'BOCA'
 
@@ -26,6 +27,8 @@ const TIPOS_DIENTE = [
   'Tercer molar',
 ];
 
+const TIPOS_DIENTE_TEMPORAL = ['Incisivo central', 'Incisivo lateral', 'Canino', 'Primer molar', 'Segundo molar'];
+
 export const CUADRANTES = {
   C1: 'Cuadrante 1 · sup. derecho',
   C2: 'Cuadrante 2 · sup. izquierdo',
@@ -40,9 +43,14 @@ export const ARCADAS = {
 
 export const BOCA = 'BOCA';
 
-export const DIENTES = [1, 2, 3, 4].flatMap((cuadrante) => POSICIONES.map((posicion) => `${cuadrante}${posicion}`));
+const ES_DIENTE = /^([1-4][1-8]|[5-8][1-5])$/;
 
-const ES_DIENTE = /^[1-4][1-8]$/;
+const esTemporal = (diente: string) => Number(diente[0]) >= 5;
+
+// Cuadrante permanente del mismo lado de la boca: los temporales 5–8 equivalen a 1–4.
+const cuadrante = (diente: string) => ((Number(diente[0]) - 1) % 4) + 1;
+
+const temporalesDe = (cuadranteTemporal: number) => [1, 2, 3, 4, 5].map((posicion) => `${cuadranteTemporal}${posicion}`);
 const ES_CUADRANTE = /^C[1-4]$/;
 
 export function alcanceDeZona(zona: string): Alcance | null {
@@ -58,7 +66,8 @@ export function dientesDeZona(zona: string): string[] {
     case 'diente':
       return [zona];
     case 'cuadrante':
-      return POSICIONES.map((posicion) => `${zona[1]}${posicion}`);
+      // Sus dientes permanentes y los temporales del mismo lado (C1 → 51–55, …, C4 → 81–85).
+      return [...POSICIONES.map((posicion) => `${zona[1]}${posicion}`), ...temporalesDe(Number(zona[1]) + 4)];
     case 'arcada':
       return zona === 'AS' ? [...dientesDeZona('C1'), ...dientesDeZona('C2')] : [...dientesDeZona('C3'), ...dientesDeZona('C4')];
     default:
@@ -97,11 +106,22 @@ export function ordenZona(zona: string): number {
   }
 }
 
-export const cuadranteDeDiente = (diente: string) => `C${diente[0]}` as keyof typeof CUADRANTES;
+export const cuadranteDeDiente = (diente: string) => `C${cuadrante(diente)}` as keyof typeof CUADRANTES;
 
-export const arcadaDeDiente = (diente: string) => (diente[0] === '1' || diente[0] === '2' ? 'AS' : 'AI');
+export const arcadaDeDiente = (diente: string) => (cuadrante(diente) <= 2 ? 'AS' : 'AI');
 
-export const tipoDeDiente = (diente: string) => TIPOS_DIENTE[Number(diente[1]) - 1] ?? '';
+export const tipoDeDiente = (diente: string) =>
+  (esTemporal(diente) ? TIPOS_DIENTE_TEMPORAL : TIPOS_DIENTE)[Number(diente[1]) - 1] ?? '';
+
+// Denticiones que salen en el PDF: las que tienen prestaciones por diente o cuadrante propias
+// (arcada y boca no cuentan); si no hay ninguna, la permanente.
+export function denticionesConPrestaciones(lineas: { zona: string }[]): ('permanente' | 'temporal')[] {
+  const propias = lineas.filter((l) => alcanceDeZona(l.zona) === 'diente' || alcanceDeZona(l.zona) === 'cuadrante');
+  const temporal = propias.some((l) => alcanceDeZona(l.zona) === 'diente' && esTemporal(l.zona));
+  const permanente = propias.some((l) => alcanceDeZona(l.zona) === 'cuadrante' || !esTemporal(l.zona));
+  if (!temporal) return ['permanente'];
+  return permanente ? ['permanente', 'temporal'] : ['temporal'];
+}
 
 export function zonaAfectaDiente(zona: string, diente: string): boolean {
   return zona === BOCA || dientesDeZona(zona).includes(diente);

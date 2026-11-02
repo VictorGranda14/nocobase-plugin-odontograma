@@ -125,7 +125,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     await asociarPlan(respuesta?.data?.data?.id);
   };
 
-  const descargarPdf = (svg: SVGSVGElement | null) =>
+  const descargarPdf = (svgs: SVGSVGElement[]) =>
     descargarPresupuesto(
       {
         paciente: ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente],
@@ -134,7 +134,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
         observaciones: ficha?.[CAMPOS_FICHA.observaciones],
         lineas,
       },
-      svg,
+      svgs,
     );
 
   if (!fichaId) {
