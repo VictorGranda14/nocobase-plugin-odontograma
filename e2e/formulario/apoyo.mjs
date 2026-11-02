@@ -126,7 +126,11 @@ export const fichaClinicaConPlan = async (request, zonas = [['16'], ['26']]) => 
 
 export const editarFichaClinica = async (page, id, filas = 2) => {
   await abrirPagina(page);
-  await page.locator(`.ant-table-row[data-row-key="${id}"]`).getByText('Editar', { exact: true }).click();
+  // Por la acción de fichasClinicas: una fila de fichaDental con el mismo id también tiene «Editar».
+  await page
+    .locator(`.ant-table-row[data-row-key="${id}"]`)
+    .locator('a[aria-label^="action-Action.Link-Editar-update-fichasClinicas-"]')
+    .click();
   const drawer = page.locator('.ant-drawer-content').last();
   const vista = drawer.locator('[data-odontograma]');
   await expect(vista.locator('.ant-table-row')).toHaveCount(filas);
