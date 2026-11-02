@@ -3,7 +3,8 @@ import { defineConfig } from '@playwright/test';
 // E2E contra una instancia NocoBase local preparada como indica e2e/README.md.
 export default defineConfig({
   testDir: '.',
-  testMatch: '*.e2e.mjs',
+  // Pruebas en subcarpetas (bloque/, formulario/); los módulos `apoyo.mjs` no coinciden con este patrón.
+  testMatch: '**/*.e2e.mjs',
   timeout: 90_000,
   workers: 1,
   use: {
