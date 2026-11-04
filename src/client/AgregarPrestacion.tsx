@@ -3,20 +3,25 @@ import { AutoComplete, Button, Input, InputNumber, Segmented, Select, Space, Typ
 import React, { useEffect, useState } from 'react';
 import { clp } from './constants';
 import { NuevaLinea, Prestacion } from './tipos';
-import { ALCANCES, ARCADAS, Alcance, CUADRANTES, zonaPorDefecto } from './zonas';
+import { ALCANCES, Alcance, BOCA, CUADRANTES, alcanceDeZona, cuadrantePorDefecto } from './zonas';
 
 interface AgregarPrestacionProps {
   catalogo: Prestacion[];
   secciones: string[];
   cargando?: boolean;
-  diente: string | null;
+  seleccion: string | null;
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
 }
 
-// Prestación del catálogo, zona según su alcance (diente seleccionado, cuadrante, arcada o boca) y precio.
-export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, diente, onAgregar }) => {
+const AVISOS = {
+  diente: 'Selecciona el diente en el odontograma para agregar esta prestación.',
+  arcada: 'Selecciona la arcada superior o inferior en el odontograma para agregar esta prestación.',
+};
+
+// Prestación del catálogo, zona según su alcance (la selección del dibujo; el cuadrante, aparte; la boca, siempre) y precio.
+export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, seleccion, onAgregar }) => {
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
-  const [zona, setZona] = useState<string | null>(null);
+  const [cuadrante, setCuadrante] = useState<string | null>(null);
   const [precio, setPrecio] = useState<number | null>(null);
   // Se conserva entre una prestación y otra, para agregar varias a la misma sección.
   const [seccion, setSeccion] = useState('');
@@ -24,19 +29,20 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
 
   const prestacion = catalogo.find((p) => p.id === prestacionId);
   const alcance = prestacion?.alcance;
-  const zonaEfectiva = alcance === 'diente' ? diente : zona;
+  const zonaDeLaSeleccion = seleccion && alcanceDeZona(seleccion) === alcance ? seleccion : null;
+  const zonaEfectiva = alcance === 'boca' ? BOCA : alcance === 'cuadrante' ? cuadrante : zonaDeLaSeleccion;
 
-  // Al elegir otro diente, el cuadrante o la arcada propuestos lo siguen.
+  // Al elegir otro diente, el cuadrante propuesto lo sigue.
   useEffect(() => {
-    if (alcance && alcance !== 'diente' && alcance !== 'boca') setZona(zonaPorDefecto(alcance, diente));
+    if (alcance === 'cuadrante' && seleccion && alcanceDeZona(seleccion) === 'diente') setCuadrante(cuadrantePorDefecto(seleccion));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diente]);
+  }, [seleccion]);
 
   const elegirPrestacion = (id: number) => {
     const elegida = catalogo.find((p) => p.id === id);
     setPrestacionId(id);
     setPrecio(elegida ? Number(elegida.precio) : null);
-    setZona(elegida ? zonaPorDefecto(elegida.alcance, diente) : null);
+    setCuadrante(elegida?.alcance === 'cuadrante' ? cuadrantePorDefecto(seleccion) : null);
   };
 
   const agregar = async () => {
@@ -49,7 +55,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
     }
     setPrestacionId(null);
     setPrecio(null);
-    setZona(null);
+    setCuadrante(null);
   };
 
   const opcionesCatalogo = (Object.keys(ALCANCES) as Alcance[])
@@ -87,16 +93,9 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
         </AutoComplete>
         {alcance === 'cuadrante' && (
           <Segmented
-            value={zona}
-            onChange={(v) => setZona(String(v))}
+            value={cuadrante}
+            onChange={(v) => setCuadrante(String(v))}
             options={Object.keys(CUADRANTES).map((c) => ({ value: c, label: c, title: CUADRANTES[c] }))}
-          />
-        )}
-        {alcance === 'arcada' && (
-          <Segmented
-            value={zona}
-            onChange={(v) => setZona(String(v))}
-            options={Object.entries(ARCADAS).map(([value, label]) => ({ value, label }))}
           />
         )}
         <InputNumber
@@ -113,9 +112,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
           Agregar
         </Button>
       </Space>
-      {alcance === 'diente' && !diente && (
-        <Typography.Text type="warning">Selecciona el diente en el odontograma para agregar esta prestación.</Typography.Text>
-      )}
+      {(alcance === 'diente' || alcance === 'arcada') && !zonaDeLaSeleccion && <Typography.Text type="warning">{AVISOS[alcance]}</Typography.Text>}
     </>
   );
 };

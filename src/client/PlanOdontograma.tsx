@@ -8,7 +8,7 @@ import { nombresDeSecciones } from './secciones';
 import { TablaPrestaciones } from './TablaPrestaciones';
 import { Linea, NuevaLinea, Prestacion } from './tipos';
 import { TotalesPlan } from './TotalesPlan';
-import { denticionesConPrestaciones, tipoDeDiente, zonaAfectaDiente } from './zonas';
+import { alcanceDeZona, denticionesConPrestaciones, etiquetaZona, tipoDeDiente, zonaAfecta } from './zonas';
 
 interface PlanOdontogramaProps {
   lineas: Linea[];
@@ -25,6 +25,11 @@ interface PlanOdontogramaProps {
   onDescargarPdf?: (svgs: SVGSVGElement[]) => Promise<void>;
 }
 
+const titulo = (zona: string | null) => {
+  if (!zona) return 'Selecciona un diente o una zona en el odontograma';
+  return alcanceDeZona(zona) === 'diente' ? `${etiquetaZona(zona)} · ${tipoDeDiente(zona)}` : etiquetaZona(zona);
+};
+
 // Vista completa de un plan: odontograma, agregar prestación, tabla y totales. No sabe de dónde vienen las líneas.
 export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   lineas,
@@ -40,12 +45,12 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   onDescargarPdf,
 }) => {
   const contenedor = useRef<HTMLDivElement>(null);
-  const [diente, setDiente] = useState<string | null>(null);
-  const [soloDiente, setSoloDiente] = useState(false);
+  const [zona, setZona] = useState<string | null>(null);
+  const [soloSeleccion, setSoloSeleccion] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const [capturar, setCapturar] = useState<Denticion[]>([]);
 
-  const filtro = soloDiente && diente ? (l: Linea) => zonaAfectaDiente(l.zona, diente) : undefined;
+  const filtro = soloSeleccion && zona ? (l: Linea) => zonaAfecta(l.zona, zona) : undefined;
 
   // Dibuja fuera de pantalla cada dentición con prestaciones y las pasa al PDF.
   const descargarPdf = async () => {
@@ -65,26 +70,26 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
     <Row gutter={[24, 16]} data-odontograma>
       <Col span={24}>
         <div ref={contenedor}>
-          <DibujoPlan lineas={lineas} diente={diente} onSeleccionarDiente={setDiente} capturar={capturar} />
+          <DibujoPlan lineas={lineas} zona={zona} onSeleccionarZona={setZona} capturar={capturar} />
         </div>
       </Col>
       <Col span={24}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
-            {diente ? `Diente ${diente} · ${tipoDeDiente(diente)}` : 'Selecciona un diente en el odontograma'}
+            {titulo(zona)}
           </Typography.Title>
 
-          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} diente={diente} onAgregar={onAgregar} />}
+          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} seleccion={zona} onAgregar={onAgregar} />}
 
           <Space>
-            <Switch size="small" checked={soloDiente} disabled={!diente} onChange={setSoloDiente} />
-            <Typography.Text>Filtrar solo lo que afecta al diente seleccionado</Typography.Text>
+            <Switch size="small" checked={soloSeleccion} disabled={!zona} onChange={setSoloSeleccion} />
+            <Typography.Text>Filtrar solo lo que afecta a la selección</Typography.Text>
           </Space>
 
           <TablaPrestaciones
             lineas={lineas}
             filtro={filtro}
-            diente={diente}
+            zona={zona}
             readOnly={readOnly}
             cargando={cargandoLineas}
             onAlternarEstado={onAlternarEstado}

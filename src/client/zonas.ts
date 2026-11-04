@@ -36,7 +36,7 @@ export const CUADRANTES = {
   C4: 'Cuadrante 4 · inf. derecho',
 } as const;
 
-export const ARCADAS = {
+const ARCADAS = {
   AS: 'Arcada superior',
   AI: 'Arcada inferior',
 } as const;
@@ -106,10 +106,6 @@ export function ordenZona(zona: string): number {
   }
 }
 
-export const cuadranteDeDiente = (diente: string) => `C${cuadrante(diente)}` as keyof typeof CUADRANTES;
-
-export const arcadaDeDiente = (diente: string) => (cuadrante(diente) <= 2 ? 'AS' : 'AI');
-
 export const tipoDeDiente = (diente: string) =>
   (esTemporal(diente) ? TIPOS_DIENTE_TEMPORAL : TIPOS_DIENTE)[Number(diente[1]) - 1] ?? '';
 
@@ -123,20 +119,11 @@ export function denticionesConPrestaciones(lineas: { zona: string }[]): ('perman
   return permanente ? ['permanente', 'temporal'] : ['temporal'];
 }
 
-export function zonaAfectaDiente(zona: string, diente: string): boolean {
-  return zona === BOCA || dientesDeZona(zona).includes(diente);
+// Si una línea en `zona` abarca lo seleccionado (un diente, una arcada o la boca).
+export function zonaAfecta(zona: string, seleccion: string): boolean {
+  return zona === BOCA || zona === seleccion || dientesDeZona(zona).includes(seleccion);
 }
 
-// Zona por defecto para una prestación según el diente seleccionado.
-export function zonaPorDefecto(alcance: Alcance, diente?: string | null): string | null {
-  switch (alcance) {
-    case 'diente':
-      return diente ?? null;
-    case 'cuadrante':
-      return diente ? cuadranteDeDiente(diente) : 'C1';
-    case 'arcada':
-      return diente ? arcadaDeDiente(diente) : 'AS';
-    case 'boca':
-      return BOCA;
-  }
-}
+// Cuadrante propuesto según la selección: el del diente seleccionado o, si no hay, el primero.
+export const cuadrantePorDefecto = (seleccion?: string | null) =>
+  seleccion && alcanceDeZona(seleccion) === 'diente' ? `C${cuadrante(seleccion)}` : 'C1';

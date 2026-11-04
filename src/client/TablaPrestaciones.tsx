@@ -1,15 +1,16 @@
 import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { App, Button, Dropdown, Empty, Input, Modal, Popconfirm, Space, Table, Tag, Typography } from 'antd';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { coloresDePrestaciones } from './colores';
 import { ESTADOS, Estado, clp, fechaCL } from './constants';
 import { SIN_SECCION, agruparPorSeccion } from './secciones';
 import { Linea } from './tipos';
-import { etiquetaZona, zonaAfectaDiente } from './zonas';
+import { etiquetaZona, zonaAfecta } from './zonas';
 
 interface TablaPrestacionesProps {
   lineas: Linea[]; // en orden de creación
   filtro?: (linea: Linea) => boolean; // filas visibles; los subtotales siguen contando todas
-  diente: string | null;
+  zona: string | null;
   readOnly: boolean;
   cargando?: boolean;
   onAlternarEstado: (linea: Linea) => void;
@@ -18,11 +19,11 @@ interface TablaPrestacionesProps {
   onEliminarSeccion: (nombre: string) => void;
 }
 
-// Detalle del plan agrupado por sección, con su subtotal; resalta las filas que afectan al diente seleccionado.
+// Detalle del plan agrupado por sección, con su subtotal; resalta las filas que afectan a la selección.
 export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({
   lineas,
   filtro,
-  diente,
+  zona,
   readOnly,
   cargando,
   onAlternarEstado,
@@ -33,9 +34,21 @@ export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({
   const { message, modal } = App.useApp();
   const [renombrando, setRenombrando] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState('');
+  const colorDe = useMemo(() => coloresDePrestaciones(lineas), [lineas]);
   const columnas = [
     { title: 'Zona', dataIndex: 'zona', render: (z: string) => etiquetaZona(z) },
-    { title: 'Prestación', render: (_: unknown, l: Linea) => l.prestacionAsociada?.nombrePrestacion ?? '-' },
+    {
+      title: 'Prestación',
+      // Fondo suave y texto oscuro, como los selectores del dibujo: se lee sobre cualquier color del catálogo.
+      render: (_: unknown, l: Linea) => {
+        const color = colorDe(l.FK_prestacion);
+        return (
+          <Tag style={{ background: `color-mix(in srgb, ${color} 35%, white)`, borderColor: color, color: '#333' }}>
+            {l.prestacionAsociada?.nombrePrestacion ?? '-'}
+          </Tag>
+        );
+      },
+    },
     {
       title: 'Estado',
       dataIndex: 'estado',
@@ -83,7 +96,7 @@ export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({
       dataSource={filtro ? filas.filter(filtro) : filas}
       columns={columnas}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Sin prestaciones" /> }}
-      onRow={(l) => ({ style: diente && zonaAfectaDiente(l.zona, diente) ? { background: 'rgba(22, 119, 255, 0.06)' } : undefined })}
+      onRow={(l) => ({ style: zona && zonaAfecta(l.zona, zona) ? { background: 'rgba(22, 119, 255, 0.06)' } : undefined })}
     />
   );
 

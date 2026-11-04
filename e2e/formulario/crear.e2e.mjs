@@ -59,3 +59,50 @@ test('crear una ficha clínica continuando un plan del paciente muestra lo anter
   const lineas = await listar(request, 'prestacionesPlanTratamiento', { FK_planTratamiento: plan.id });
   expect(lineas.map((l) => l.zona)).toEqual(['16', '26']);
 });
+
+const agregarEnSelector = async (page, plan, selector, nombre) => {
+  await plan.getByRole('button', { name: selector, exact: true }).click();
+  await plan.locator('.ant-select').first().click();
+  await page.keyboard.type(nombre);
+  await page.keyboard.press('Enter');
+  await plan.getByRole('button', { name: /Agregar/ }).click();
+};
+
+const lineasDeLaFichaNueva = async (request) => {
+  const [fichaClinica] = await nuevas(request, 'fichasClinicas');
+  const [ficha] = await listar(request, 'fichaDental', { FK_fichaClinica: fichaClinica.id });
+  return listar(request, 'prestacionesPlanTratamiento', { FK_planTratamiento: ficha.FK_planTratamiento });
+};
+
+test('seleccionar Boca completa y agregar una prestación se guarda en la boca con la ficha clínica', async ({ page, request }) => {
+  const limpieza = await prestacion(request, 'Limpieza');
+  const drawer = await nuevaFichaClinica(page);
+
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const plan = drawer.locator('[data-odontograma]');
+  await agregarEnSelector(page, plan, 'Boca completa', 'Limpieza');
+  await expect(plan.locator('.ant-table-row')).toHaveCount(1);
+  await enviar(page, drawer);
+
+  const lineas = await lineasDeLaFichaNueva(request);
+  expect(lineas.map((l) => [l.zona, l.FK_prestacion])).toEqual([['BOCA', limpieza.id]]);
+});
+
+test('seleccionar cada arcada y agregar una prestación se guarda en esa arcada con la ficha clínica', async ({ page, request }) => {
+  const frenillos = await prestacion(request, 'Frenillos arcada');
+  const drawer = await nuevaFichaClinica(page);
+
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const plan = drawer.locator('[data-odontograma]');
+  await agregarEnSelector(page, plan, 'Arcada superior', 'Frenillos arcada');
+  await expect(plan.locator('.ant-table-row')).toHaveCount(1);
+  await agregarEnSelector(page, plan, 'Arcada inferior', 'Frenillos arcada');
+  await expect(plan.locator('.ant-table-row')).toHaveCount(2);
+  await enviar(page, drawer);
+
+  const lineas = await lineasDeLaFichaNueva(request);
+  expect(lineas.map((l) => [l.zona, l.FK_prestacion])).toEqual([
+    ['AS', frenillos.id],
+    ['AI', frenillos.id],
+  ]);
+});

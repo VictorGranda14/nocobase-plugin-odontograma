@@ -30,7 +30,7 @@ export interface ResultadoPdf {
 }
 
 const MARGEN = 15;
-// El odontograma es más alto que ancho: se limita para que la tabla quepa en la primera hoja.
+// Se limita el alto del odontograma para que la tabla quepa en la primera hoja.
 const ALTO_MAX_IMAGEN = 85;
 const PROPIEDADES_SVG = ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'fill-opacity', 'stroke-opacity', 'display', 'visibility'];
 

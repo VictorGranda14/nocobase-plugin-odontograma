@@ -32,10 +32,9 @@ test('una ficha con prestaciones previas se pinta según la zona más específic
   await expect(popup.locator('.ant-table-row')).toHaveCount(4); // espera a que carguen las líneas
 
   expect(await colorDe(popup, '1.6')).toBe(resina.color); // diente
-  expect(await colorDe(popup, '1.5')).toBe(destartraje.color); // cuadrante 1 gana sobre la arcada
-  expect(await colorDe(popup, '2.5')).toBe(frenillos.color); // solo arcada superior
-  expect([resina.color, destartraje.color, frenillos.color, limpieza.color]).not.toContain(await colorDe(popup, '3.5'));
-  await expect(popup.getByText('Limpieza').first()).toBeVisible(); // boca completa
+  expect(await colorDe(popup, '1.5')).toBe(destartraje.color); // el cuadrante 1 pinta sus dientes
+  expect(await colorDe(popup, '2.5')).toBe('#fff'); // la arcada pinta su selector, no sus dientes
+  expect(await colorDe(popup, '3.5')).toBe('#fff');
 
   await popup.getByRole('button', { name: 'Pieza 1.6', exact: true }).hover();
   const tooltip = page.getByRole('tooltip');
