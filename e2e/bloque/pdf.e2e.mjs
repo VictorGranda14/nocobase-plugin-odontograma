@@ -29,6 +29,22 @@ test('descargar el presupuesto desde el bloque genera el PDF del paciente; sin s
   expect(contenido).not.toContain('(Subtotal');
 });
 
+test('el PDF muestra las caras de una línea en la tabla', async ({ page, request }) => {
+  const resina = await prestacion(request, 'Resina');
+  const plan = await crearPlan(request);
+  await crearFicha(request, { plan });
+  await crearLinea(request, plan, resina, '16', 35000, { caras: 'Mesial,Oclusal' });
+
+  const popup = await abrirFicha(page);
+  await expect(popup.locator('.ant-table-row')).toHaveCount(1);
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    popup.getByRole('button', { name: /Descargar presupuesto/ }).click(),
+  ]);
+  const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
+  expect(contenido).toContain('(Diente 16 · Mesial · Oclusal)');
+});
+
 test('el PDF incluye un odontograma por cada dentición con prestaciones', async ({ page, request }) => {
   const resina = await prestacion(request, 'Resina');
   const plan = await crearPlan(request);

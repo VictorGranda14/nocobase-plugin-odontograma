@@ -10,6 +10,7 @@ interface AgregarPrestacionProps {
   secciones: string[];
   cargando?: boolean;
   seleccion: string | null;
+  caras: string[];
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
 }
 
@@ -20,7 +21,7 @@ const AVISOS = {
 };
 
 // Prestación del catálogo, zona según su alcance (la selección del dibujo; la boca, siempre) y precio.
-export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, seleccion, onAgregar }) => {
+export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, seleccion, caras, onAgregar }) => {
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
   const [precio, setPrecio] = useState<number | null>(null);
   // Se conserva entre una prestación y otra, para agregar varias a la misma sección.
@@ -42,7 +43,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
     if (!prestacion || !zonaEfectiva || precio == null) return;
     setGuardando(true);
     try {
-      await onAgregar({ prestacion, zona: zonaEfectiva, precio, seccion: seccion.trim() || null });
+      await onAgregar({ prestacion, zona: zonaEfectiva, caras: alcance === 'diente' && caras.length ? caras.join(',') : null, precio, seccion: seccion.trim() || null });
     } finally {
       setGuardando(false);
     }

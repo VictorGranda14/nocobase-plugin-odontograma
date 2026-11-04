@@ -39,6 +39,8 @@ const ES_DIENTE = /^([1-4][1-8]|[5-8][1-5])$/;
 
 const esTemporal = (diente: string) => Number(diente[0]) >= 5;
 
+const arcadaSuperior = (diente: string) => [1, 2, 5, 6].includes(Number(diente[0]));
+
 // Dientes de los dos lados de una arcada: permanentes (primer dígito 1–4) y temporales (5–8).
 const dientesDeArcada = (permanentes: number[], temporales: number[]) => [
   ...permanentes.flatMap((lado) => POSICIONES.map((posicion) => `${lado}${posicion}`)),
@@ -91,6 +93,15 @@ export function etiquetaZona(zona: string): string {
       return zona || '-';
   }
 }
+
+// Las caras de un diente: la opuesta a la vestibular depende de la arcada.
+export const carasDelDiente = (diente: string) => ['Vestibular', arcadaSuperior(diente) ? 'Palatino' : 'Lingual', 'Mesial', 'Distal', 'Oclusal'];
+
+export const carasDeLinea = (caras?: string | null) => (caras ? caras.split(',') : []);
+
+// La zona de una línea con sus caras, por ejemplo «Diente 16 · Mesial · Oclusal».
+export const etiquetaLinea = ({ zona, caras }: { zona: string; caras?: string | null }) =>
+  [etiquetaZona(zona), ...carasDeLinea(caras)].join(' · ');
 
 // Boca → arcadas → sextantes → dientes; dentro de cada grupo, por número.
 export function ordenZona(zona: string): number {

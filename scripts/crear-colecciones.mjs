@@ -264,6 +264,7 @@ const COLECCIONES = [
       }),
       muchosAUno('prestacionAsociada', 'Prestación', 'prestacionesDentales', 'FK_prestacion'),
       seleccion('zona', 'Zona', OPCIONES_ZONA),
+      texto('caras', 'Caras'),
       entero('precio', 'Precio (CLP)'),
       seleccion(
         'estado',

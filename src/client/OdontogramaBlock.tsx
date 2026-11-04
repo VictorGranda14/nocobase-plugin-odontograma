@@ -6,7 +6,7 @@ import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
 import { useDescargarPresupuesto } from './presupuesto';
 import { Linea, NuevaLinea, useCatalogo } from './tipos';
-import { etiquetaZona } from './zonas';
+import { etiquetaLinea } from './zonas';
 
 export interface OdontogramaBlockProps {
   readOnly?: boolean;
@@ -74,7 +74,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     }
   };
 
-  const agregar = ({ prestacion, zona, precio, seccion }: NuevaLinea) =>
+  const agregar = ({ prestacion, zona, caras, precio, seccion }: NuevaLinea) =>
     ejecutar(
       () =>
         api.resource(COLECCION_LINEAS).create({
@@ -82,12 +82,13 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
             [CAMPOS_LINEA.fkPlan]: planId,
             [CAMPOS_LINEA.fkPrestacion]: prestacion.id,
             [CAMPOS_LINEA.zona]: zona,
+            [CAMPOS_LINEA.caras]: caras,
             [CAMPOS_LINEA.precio]: precio,
             [CAMPOS_LINEA.estado]: 'planificado',
             [CAMPOS_LINEA.seccion]: seccion,
           },
         }),
-      `${prestacion.nombrePrestacion} agregada en ${etiquetaZona(zona).toLowerCase()}`,
+      `${prestacion.nombrePrestacion} agregada en ${etiquetaLinea({ zona, caras }).toLowerCase()}`,
     );
 
   // Al marcarla como realizada se registra la atención actual; al volver a planificada se limpia.

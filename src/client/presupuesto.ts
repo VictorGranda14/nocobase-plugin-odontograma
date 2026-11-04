@@ -32,6 +32,7 @@ export const useDescargarPresupuesto = () => {
           observaciones: observaciones ?? undefined,
           lineas: lineas.map((l) => ({
             zona: l.zona,
+            caras: l.caras,
             prestacion: l.prestacionAsociada?.nombrePrestacion ?? '-',
             estado: l.estado,
             precio: Number(l.precio) || 0,

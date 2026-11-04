@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { api } from '../apoyo.mjs';
-import { editarFichaClinica, fichaClinicaConPlan, prestacion, registrarHooks } from './apoyo.mjs';
+import { editarFichaClinica, enviar, fichaClinicaConPlan, listar, prestacion, registrarHooks } from './apoyo.mjs';
 
 // Selectores de arcadas y boca completa en el formulario de la ficha clínica (#4).
 
@@ -20,4 +20,17 @@ test('al editar una ficha clínica, el selector toma el color de la última pres
   const colorDeSelector = vista.getByRole('button', { name: 'Arcada superior', exact: true }).locator('rect');
   expect(resina.color).not.toBe(limpieza.color);
   await expect(colorDeSelector).toHaveAttribute('fill', limpieza.color);
+});
+
+test('reabrir una ficha clínica con una línea por cara y volver a guardarla conserva sus caras', async ({ page, request }) => {
+  const { fichaClinica, plan, lineas } = await fichaClinicaConPlan(request, [['16']]);
+  await api(request, 'prestacionesPlanTratamiento:update', { params: { filterByTk: lineas[0].id }, values: { caras: 'Mesial,Oclusal' } });
+
+  const { drawer, vista } = await editarFichaClinica(page, fichaClinica.id, 1);
+  await expect(vista.locator('.ant-table-row td:first-child')).toHaveText('Diente 16 · Mesial · Oclusal');
+  await vista.locator('.ant-table-row').getByText('Planificado', { exact: true }).click();
+  await enviar(page, drawer);
+
+  const guardadas = await listar(request, 'prestacionesPlanTratamiento', { FK_planTratamiento: plan.id });
+  expect(guardadas.map((l) => [l.zona, l.caras, l.estado])).toEqual([['16', 'Mesial,Oclusal', 'realizado']]);
 });

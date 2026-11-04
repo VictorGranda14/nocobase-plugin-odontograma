@@ -13,6 +13,7 @@ export interface Prestacion {
 export interface Linea {
   id: number;
   zona: string;
+  caras?: string | null; // separadas por coma; sin caras, la línea es del diente completo
   precio: number;
   estado: Estado;
   seccion?: string | null;
@@ -26,6 +27,7 @@ export interface Linea {
 export interface NuevaLinea {
   prestacion: Prestacion;
   zona: string;
+  caras?: string | null; // separadas por coma; sin caras, la línea es del diente completo
   precio: number;
   seccion: string | null;
 }

@@ -25,9 +25,9 @@ interface PlanOdontogramaProps {
   onDescargarPdf?: (svgs: SVGSVGElement[]) => Promise<void>;
 }
 
-const titulo = (zona: string | null) => {
+const titulo = (zona: string | null, caras: string[]) => {
   if (!zona) return 'Selecciona un diente o una zona en el odontograma';
-  return alcanceDeZona(zona) === 'diente' ? `${etiquetaZona(zona)} · ${tipoDeDiente(zona)}` : etiquetaZona(zona);
+  return alcanceDeZona(zona) === 'diente' ? [etiquetaZona(zona), tipoDeDiente(zona), ...caras].join(' · ') : etiquetaZona(zona);
 };
 
 // Vista completa de un plan: odontograma, agregar prestación, tabla y totales. No sabe de dónde vienen las líneas.
@@ -46,9 +46,25 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
 }) => {
   const contenedor = useRef<HTMLDivElement>(null);
   const [zona, setZona] = useState<string | null>(null);
+  const [caras, setCaras] = useState<string[]>([]);
   const [soloSeleccion, setSoloSeleccion] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const [capturar, setCapturar] = useState<Denticion[]>([]);
+
+  const seleccionarZona = (nueva: string) => {
+    setZona(nueva);
+    setCaras([]);
+  };
+
+  // Marca o desmarca una cara del diente seleccionado; en otro diente, la selección pasa a él con solo esa cara.
+  const marcarCara = (diente: string, cara: string) => {
+    if (zona !== diente) {
+      setZona(diente);
+      setCaras([cara]);
+      return;
+    }
+    setCaras((actuales) => (actuales.includes(cara) ? actuales.filter((c) => c !== cara) : [...actuales, cara]));
+  };
 
   const filtro = soloSeleccion && zona ? (l: Linea) => zonaAfecta(l.zona, zona) : undefined;
 
@@ -70,16 +86,16 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
     <Row gutter={[24, 16]} data-odontograma>
       <Col span={24}>
         <div ref={contenedor}>
-          <DibujoPlan lineas={lineas} zona={zona} onSeleccionarZona={setZona} capturar={capturar} />
+          <DibujoPlan lineas={lineas} zona={zona} caras={caras} onSeleccionarZona={seleccionarZona} onMarcarCara={marcarCara} capturar={capturar} />
         </div>
       </Col>
       <Col span={24}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
-            {titulo(zona)}
+            {titulo(zona, caras)}
           </Typography.Title>
 
-          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} seleccion={zona} onAgregar={onAgregar} />}
+          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} seleccion={zona} caras={caras} onAgregar={onAgregar} />}
 
           <Space>
             <Switch size="small" checked={soloSeleccion} disabled={!zona} onChange={setSoloSeleccion} />

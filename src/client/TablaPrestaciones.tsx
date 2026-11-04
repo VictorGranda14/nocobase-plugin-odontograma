@@ -5,7 +5,7 @@ import { coloresDePrestaciones } from './colores';
 import { ESTADOS, Estado, clp, fechaCL } from './constants';
 import { SIN_SECCION, agruparPorSeccion } from './secciones';
 import { Linea } from './tipos';
-import { etiquetaZona, zonaAfecta } from './zonas';
+import { etiquetaLinea, zonaAfecta } from './zonas';
 
 interface TablaPrestacionesProps {
   lineas: Linea[]; // en orden de creación
@@ -36,7 +36,7 @@ export const TablaPrestaciones: React.FC<TablaPrestacionesProps> = ({
   const [nuevoNombre, setNuevoNombre] = useState('');
   const colorDe = useMemo(() => coloresDePrestaciones(lineas), [lineas]);
   const columnas = [
-    { title: 'Zona', dataIndex: 'zona', render: (z: string) => etiquetaZona(z) },
+    { title: 'Zona', render: (_: unknown, l: Linea) => etiquetaLinea(l) },
     {
       title: 'Prestación',
       // Fondo suave y texto oscuro, como los selectores del dibujo: se lee sobre cualquier color del catálogo.

@@ -3,10 +3,11 @@ import { jsPDF } from 'jspdf';
 import autoTable, { RowInput } from 'jspdf-autotable';
 import { ESTADOS, Estado, PDF_NOTA_VALIDEZ, PDF_TITULO, clp } from './constants';
 import { SIN_SECCION, agruparPorSeccion } from './secciones';
-import { etiquetaZona } from './zonas';
+import { etiquetaLinea } from './zonas';
 
 export interface LineaPresupuesto {
   zona: string;
+  caras?: string | null;
   prestacion: string;
   estado: Estado;
   precio: number;
@@ -83,7 +84,7 @@ const fechaHoy = () => new Date().toLocaleDateString('es-CL');
 
 const sanear = (texto: string) => texto.replace(/[^0-9A-Za-z-]+/g, '');
 
-const filaLinea = (l: LineaPresupuesto) => [etiquetaZona(l.zona), l.prestacion, ESTADOS[l.estado]?.etiqueta ?? l.estado, clp(l.precio)];
+const filaLinea = (l: LineaPresupuesto) => [etiquetaLinea(l), l.prestacion, ESTADOS[l.estado]?.etiqueta ?? l.estado, clp(l.precio)];
 
 // Igual que la tabla de la pantalla: sin secciones, una lista por zona; con secciones, cada una con su título y subtotal.
 function filasDelDetalle(lineas: LineaPresupuesto[]): RowInput[] {

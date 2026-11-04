@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { api } from '../apoyo.mjs';
-import { agregarEnDiente, ctx, enviar, listar, nuevaFichaClinica, nuevas, prestacion, registrarHooks } from './apoyo.mjs';
+import { agregarEnDiente, ctx, editarFichaClinica, enviar, listar, nuevaFichaClinica, nuevas, prestacion, registrarHooks } from './apoyo.mjs';
 
 // Crear una ficha clínica desde el formulario: con plan nuevo y continuando un plan del paciente.
 
@@ -119,4 +119,28 @@ test('seleccionar un sextante y agregar una prestación se guarda en ese sextant
 
   const lineas = await lineasDeLaFichaNueva(request);
   expect(lineas.map((l) => [l.zona, l.FK_prestacion])).toEqual([['S3', destartraje.id]]);
+});
+
+test('marcar caras y agregar se guarda con esas caras en la ficha clínica, y al reabrirla la fila las muestra', async ({ page, request }) => {
+  const resina = await prestacion(request, 'Resina');
+  const drawer = await nuevaFichaClinica(page);
+
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const plan = drawer.locator('[data-odontograma]');
+  const circulo = plan.getByRole('button', { name: 'Caras de la pieza 1.6', exact: true });
+  await circulo.getByLabel('Mesial', { exact: true }).click();
+  await circulo.getByLabel('Oclusal', { exact: true }).click();
+  await plan.locator('.ant-select').first().click();
+  await page.keyboard.type('Resina');
+  await page.keyboard.press('Enter');
+  await plan.getByRole('button', { name: /Agregar/ }).click();
+  await expect(plan.locator('.ant-table-row')).toHaveCount(1);
+  await enviar(page, drawer);
+
+  const lineas = await lineasDeLaFichaNueva(request);
+  expect(lineas.map((l) => [l.zona, l.caras, l.FK_prestacion])).toEqual([['16', 'Mesial,Oclusal', resina.id]]);
+
+  const [fichaClinica] = await nuevas(request, 'fichasClinicas');
+  const { vista } = await editarFichaClinica(page, fichaClinica.id, 1);
+  await expect(vista.locator('.ant-table-row td:first-child')).toHaveText('Diente 16 · Mesial · Oclusal');
 });

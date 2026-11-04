@@ -53,13 +53,14 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
 
   const cambiarLineas = (nuevas: Linea[]) => onChange?.({ ...value, [CAMPOS_PLAN.lineas]: nuevas });
 
-  const agregar = ({ prestacion, zona, precio, seccion }: NuevaLinea) =>
+  const agregar = ({ prestacion, zona, caras, precio, seccion }: NuevaLinea) =>
     cambiarLineas([
       ...lineasPlan,
       {
         [CAMPOS_LINEA.fkPrestacion]: prestacion.id,
         [CAMPOS_LINEA.prestacion]: prestacion,
         [CAMPOS_LINEA.zona]: zona,
+        [CAMPOS_LINEA.caras]: caras,
         [CAMPOS_LINEA.precio]: precio,
         [CAMPOS_LINEA.estado]: 'planificado',
         [CAMPOS_LINEA.seccion]: seccion,

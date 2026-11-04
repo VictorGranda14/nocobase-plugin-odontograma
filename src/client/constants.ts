@@ -41,6 +41,7 @@ export const CAMPOS_LINEA = {
   fkPrestacion: 'FK_prestacion',
   prestacion: 'prestacionAsociada',
   zona: 'zona',
+  caras: 'caras',
   precio: 'precio',
   estado: 'estado',
   seccion: 'seccion',
