@@ -3,11 +3,11 @@
 Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugares: un bloque para el popup «Ver» de una **ficha dental**, y un campo para el subformulario de la ficha dental dentro del formulario de crear o editar una **ficha clínica**. Permite:
 
 - Asociar la atención a un **plan de tratamiento** nuevo o continuar uno anterior del mismo paciente, para seguirlo a lo largo de varias citas.
-- Ver un odontograma (FDI, dentición permanente) pintado según las prestaciones del plan.
+- Ver un odontograma (FDI) pintado según las prestaciones del plan, con pestañas para la dentición **permanente** y la **temporal**.
 - Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
-- Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales).
+- Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales). Incluye un odontograma por cada dentición con prestaciones por diente o cuadrante; las de arcada y boca no cuentan, y si no hay ninguna sale el permanente.
 
 Lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
 
@@ -40,7 +40,7 @@ Cada ficha dental (una atención) apunta a un plan, y un plan se comparte entre 
 
 `seccion` es un texto libre: una sección existe mientras tenga prestaciones, y las prestaciones sin sección se muestran en «Sin sección». Las secciones aparecen en orden de creación, en la pantalla y en el PDF.
 
-`zona` vale `11`…`48` (diente), `C1`…`C4` (cuadrante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
+`zona` vale `11`…`48` (diente permanente), `51`…`85` (diente temporal), `C1`…`C4` (cuadrante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
 
 Los nombres de colecciones y campos están centralizados en `src/client/constants.ts`.
 
@@ -81,7 +81,7 @@ El campo también descarga el presupuesto en PDF, aun antes de guardar. Usa el p
 
 ## Limitaciones
 
-- Solo dientes permanentes y diente completo (caras y dientes temporales: issues #2 y #5).
+- Solo diente completo (caras: issue #2).
 - Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante > arcada). El tooltip y la tabla muestran todas las prestaciones que lo afectan.
 - La imagen del PDF no incluye la leyenda de colores; la tabla del presupuesto detalla cada línea.
 - El plan de una atención no se cambia desde el bloque ni desde el campo una vez elegido.
