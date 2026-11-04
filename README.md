@@ -4,10 +4,10 @@ Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugar
 
 - Asociar la atención a un **plan de tratamiento** nuevo o continuar uno anterior del mismo paciente, para seguirlo a lo largo de varias citas.
 - Ver un odontograma (FDI) pintado según las prestaciones del plan, con pestañas para la dentición **permanente** y la **temporal**.
-- Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable. Los dientes, las arcadas y la boca se eligen en el dibujo, con una fila de selectores bajo los dientes.
+- Asignar prestaciones del catálogo a un **diente**, un **sextante**, una **arcada** o la **boca completa**, con precio editable. Se eligen en el dibujo, con dos filas de selectores bajo los dientes.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
-- Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales). Incluye un odontograma por cada dentición con prestaciones por diente o cuadrante; las de arcada y boca no cuentan, y si no hay ninguna sale el permanente.
+- Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales). Incluye un odontograma por cada dentición con prestaciones por diente; las de sextante, arcada y boca no cuentan, y si no hay ninguna sale el permanente.
 
 Lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
 
@@ -23,7 +23,7 @@ El dibujo viene del paquete propio [`@gransalud/odontograma-react`](https://gith
 
 ## Colecciones
 
-Deben existir antes de usar el bloque. `scripts/crear-colecciones.mjs` las crea por API con las mismas definiciones que la interfaz. En las que ya existan, solo agrega los campos que falten:
+Deben existir antes de usar el bloque. `scripts/crear-colecciones.mjs` las crea por API con las mismas definiciones que la interfaz. En las que ya existan, solo agrega los campos que falten, agrega las opciones nuevas de los campos de selección y quita las retiradas (los cuadrantes). Lee las variables de un archivo `.env` si existe; las del entorno tienen prioridad:
 
 ```bash
 NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave> node scripts/crear-colecciones.mjs
@@ -31,7 +31,7 @@ NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave
 
 | Colección | Campos |
 |---|---|
-| `prestacionesDentales` (catálogo) | `nombrePrestacion`, `alcance` (`diente`/`cuadrante`/`arcada`/`boca`), `precio` (CLP), `color`, `activo` |
+| `prestacionesDentales` (catálogo) | `nombrePrestacion`, `alcance` (`diente`/`sextante`/`arcada`/`boca`), `precio` (CLP), `color`, `activo` |
 | `planesTratamiento` (plan) | `pacienteAsociado` → `paciente` (`FK_paciente`; inversa `planesTratamientoAsociados`) |
 | `fichaDental` (atención) | `fecha`, `observaciones`, `fichaClinicaAsociada` → `fichasClinicas` (`FK_fichaClinica`; inversa `fichasDentalesAsociadas`), `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `fichasDentalesAsociadas`) |
 | `prestacionesPlanTratamiento` (líneas) | `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `prestacionesAsociadas`), `fichaDentalRealizacion` → `fichaDental` (`FK_fichaDentalRealizacion`; inversa `prestacionesRealizadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `precio`, `estado` (`planificado`/`realizado`), `seccion`, `notas` |
@@ -40,7 +40,9 @@ Cada ficha dental (una atención) apunta a un plan, y un plan se comparte entre 
 
 `seccion` es un texto libre: una sección existe mientras tenga prestaciones, y las prestaciones sin sección se muestran en «Sin sección». Las secciones aparecen en orden de creación, en la pantalla y en el PDF.
 
-`zona` vale `11`…`48` (diente permanente), `51`…`85` (diente temporal), `C1`…`C4` (cuadrante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
+`zona` vale `11`…`48` (diente permanente), `51`…`85` (diente temporal), `S1`…`S6` (sextante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
+
+Cada sextante incluye sus dientes permanentes y temporales: S1 18–14 y 55–54, S2 13–23 y 53–63, S3 24–28 y 64–65, S4 38–34 y 75–74, S5 33–43 y 73–83, S6 44–48 y 84–85.
 
 Los nombres de colecciones y campos están centralizados en `src/client/constants.ts`.
 
@@ -66,11 +68,10 @@ Es un plugin propio: no está publicado en npm ni en el marketplace de NocoBase,
 
 La zona de la prestación depende de su alcance en el catálogo:
 
-- **Diente o arcada:** se toma de lo seleccionado en el dibujo. Si no corresponde, «Agregar» queda deshabilitado y un aviso indica qué seleccionar.
-- **Cuadrante:** se elige en su propio control, que propone el cuadrante del diente seleccionado.
+- **Diente, sextante o arcada:** se toma de lo seleccionado en el dibujo. Si no corresponde, «Agregar» queda deshabilitado y un aviso indica qué seleccionar.
 - **Boca completa:** se agrega con cualquier selección, o sin ninguna.
 
-El interruptor «Filtrar solo lo que afecta a la selección» deja en la tabla lo que abarca la zona: con un diente, sus prestaciones y las de su cuadrante, su arcada y la boca; con una arcada, las de esa arcada y la boca; con la boca, solo las de la boca. El dibujo no se filtra.
+El interruptor «Filtrar solo lo que afecta a la selección» deja en la tabla lo que abarca la zona: con un diente, sus prestaciones y las de su sextante, su arcada y la boca; con un sextante o una arcada, las de esa zona y la boca; con la boca, solo las de la boca. El dibujo no se filtra.
 
 ### Bloque en el popup «Ver»
 
@@ -92,6 +93,7 @@ El campo también descarga el presupuesto en PDF, aun antes de guardar. Usa el p
 ## Limitaciones
 
 - Solo diente completo (caras: issue #2).
-- Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante). Las arcadas y la boca no pintan dientes, sino su selector, con el color de su última prestación. El tooltip muestra todas las prestaciones de esa zona, y el de un diente también las de arcada y boca que lo afectan.
+- Cada diente muestra un solo color: el de su última prestación propia. Los sextantes, las arcadas y la boca no pintan dientes, sino su selector, con el color de su última prestación. El tooltip muestra todas las prestaciones de esa zona, y el de un diente también las de sextante, arcada y boca que lo afectan.
 - En el PDF, la imagen no indica qué prestación corresponde a cada color; la tabla del presupuesto detalla cada línea. En pantalla, cada prestación tiene una etiqueta de su color en la tabla.
+- Los cuadrantes ya no existen: una prestación del catálogo con ese alcance no se ofrece, y una línea antigua se muestra con su valor (`C1`) sin afectar a ningún diente. Se deben borrar o editar a mano.
 - El plan de una atención no se cambia desde el bloque ni desde el campo una vez elegido.
