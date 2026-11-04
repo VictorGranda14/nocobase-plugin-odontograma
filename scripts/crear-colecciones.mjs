@@ -1,11 +1,15 @@
 // Crea las colecciones del odontograma en una instancia NocoBase 1.x mediante su API,
-// con las mismas definiciones que genera la interfaz. En las que ya existen, solo agrega los campos que falten.
+// con las mismas definiciones que genera la interfaz. En las que ya existen, solo agrega los campos que falten
+// y las opciones nuevas de los campos de selección.
 //
 // Uso:
 //   NOCOBASE_URL=https://staging.ejemplo.cl NOCOBASE_EMAIL=... NOCOBASE_PASSWORD=... node scripts/crear-colecciones.mjs
 //   (o NOCOBASE_TOKEN=<token de API> en lugar de email y contraseña)
 //
 // Requiere que ya existan las colecciones fichasClinicas y paciente.
+import { loadEnvFile } from 'node:process';
+
+loadEnvFile();
 
 const URL_BASE = (process.env.NOCOBASE_URL || 'http://localhost:13001').replace(/\/$/, '');
 
@@ -142,7 +146,29 @@ const muchosAUno = (name, title, target, foreignKey, inversa) => ({
   }),
 });
 
-const DIENTES = [1, 2, 3, 4].flatMap((c) => [1, 2, 3, 4, 5, 6, 7, 8].map((p) => `${c}${p}`));
+// Campo de la clave foránea, como lo registra la interfaz al crear una asociación m2o.
+const claveForanea = (name) => ({
+  name,
+  type: 'bigInt',
+  interface: 'integer',
+  isForeignKey: true,
+  uiSchema: { type: 'number', title: name, 'x-component': 'InputNumber', 'x-read-pretty': true },
+});
+
+// Antepone a cada belongsTo el campo de su clave foránea, si no está declarado ya.
+const conClavesForaneas = (fields) => {
+  const nombres = new Set(fields.map((campo) => campo.name));
+  return fields.flatMap((campo) => {
+    if (campo.type !== 'belongsTo' || nombres.has(campo.foreignKey)) return [campo];
+    nombres.add(campo.foreignKey);
+    return [claveForanea(campo.foreignKey), campo];
+  });
+};
+
+const DIENTES = [
+  ...[1, 2, 3, 4].flatMap((c) => [1, 2, 3, 4, 5, 6, 7, 8].map((p) => `${c}${p}`)),
+  ...[5, 6, 7, 8].flatMap((c) => [1, 2, 3, 4, 5].map((p) => `${c}${p}`)),
+];
 const OPCIONES_ZONA = [
   { value: 'BOCA', label: 'Boca completa' },
   { value: 'AS', label: 'Arcada superior' },
@@ -256,14 +282,36 @@ async function existe(nombre) {
 }
 
 // En una colección que ya existe solo se agregan los campos que falten (por nombre); los demás no se tocan.
+// Opciones declaradas de un campo de selección que aún no tiene el campo existente.
+const opcionesFaltantes = (declarado, actual) => {
+  const valores = new Set((actual.uiSchema?.enum ?? []).map((opcion) => opcion.value));
+  return (declarado.uiSchema?.enum ?? []).filter((opcion) => !valores.has(opcion.value));
+};
+
 async function completarCampos(coleccion) {
   const actuales = await api(`collections/${coleccion.name}/fields:list`, { params: { paginate: 'false' } });
-  const nombres = new Set(actuales.map((campo) => campo.name));
-  const faltantes = coleccion.fields.filter((campo) => !nombres.has(campo.name));
+  const porNombre = new Map(actuales.map((campo) => [campo.name, campo]));
+  const faltantes = conClavesForaneas(coleccion.fields).filter((campo) => !porNombre.has(campo.name));
   for (const campo of faltantes) {
     await api(`collections/${coleccion.name}/fields:create`, { values: campo });
   }
-  console.log(`= ${coleccion.name}: ya existe${faltantes.length ? `, se agregan ${faltantes.map((c) => c.name).join(', ')}` : ''}`);
+  // A los campos de selección que ya existen les agrega las opciones nuevas (por ejemplo, los dientes temporales de zona).
+  const ampliados = [];
+  for (const campo of coleccion.fields.filter((c) => c.interface === 'select' && porNombre.has(c.name))) {
+    const actual = porNombre.get(campo.name);
+    const nuevas = opcionesFaltantes(campo, actual);
+    if (!nuevas.length) continue;
+    await api(`collections/${coleccion.name}/fields:update`, {
+      params: { filterByTk: campo.name },
+      values: { uiSchema: { ...actual.uiSchema, enum: [...(actual.uiSchema?.enum ?? []), ...nuevas] } },
+    });
+    ampliados.push(campo.name);
+  }
+  const cambios = [
+    faltantes.length && `se agregan ${faltantes.map((c) => c.name).join(', ')}`,
+    ampliados.length && `se amplían las opciones de ${ampliados.join(', ')}`,
+  ].filter(Boolean);
+  console.log(`= ${coleccion.name}: ya existe${cambios.length ? `, ${cambios.join('; ')}` : ''}`);
 }
 
 async function main() {
@@ -289,7 +337,7 @@ async function main() {
         updatedAt: true,
         updatedBy: true,
         view: false,
-        fields: [...camposSistema(), ...fields],
+        fields: [...camposSistema(), ...conClavesForaneas(fields)],
       },
     });
     console.log(`+ ${coleccion.name}: creada`);
@@ -302,6 +350,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message);
+  console.error("Error:", error.message);
   process.exit(1);
 });
