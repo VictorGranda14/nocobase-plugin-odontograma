@@ -1,15 +1,14 @@
 // Zonas de la boca en notación FDI.
 //   Diente:    '11' … '48' (permanentes), '51' … '85' (temporales)
-//   Cuadrante: 'C1' (sup. derecho), 'C2' (sup. izquierdo), 'C3' (inf. izquierdo), 'C4' (inf. derecho),
-//              cada uno con sus dientes temporales (cuadrantes FDI 5, 6, 7 y 8)
-//   Arcada:    'AS' (superior, C1 + C2), 'AI' (inferior, C3 + C4)
+//   Sextante:  'S1' … 'S6', con sus dientes permanentes y temporales
+//   Arcada:    'AS' (superior), 'AI' (inferior), con sus dientes permanentes y temporales
 //   Boca:      'BOCA'
 
-export type Alcance = 'diente' | 'cuadrante' | 'arcada' | 'boca';
+export type Alcance = 'diente' | 'sextante' | 'arcada' | 'boca';
 
 export const ALCANCES: Record<Alcance, string> = {
   diente: 'Por diente',
-  cuadrante: 'Por cuadrante',
+  sextante: 'Por sextante',
   arcada: 'Por arcada',
   boca: 'Boca completa',
 };
@@ -29,13 +28,6 @@ const TIPOS_DIENTE = [
 
 const TIPOS_DIENTE_TEMPORAL = ['Incisivo central', 'Incisivo lateral', 'Canino', 'Primer molar', 'Segundo molar'];
 
-export const CUADRANTES = {
-  C1: 'Cuadrante 1 · sup. derecho',
-  C2: 'Cuadrante 2 · sup. izquierdo',
-  C3: 'Cuadrante 3 · inf. izquierdo',
-  C4: 'Cuadrante 4 · inf. derecho',
-} as const;
-
 const ARCADAS = {
   AS: 'Arcada superior',
   AI: 'Arcada inferior',
@@ -47,29 +39,39 @@ const ES_DIENTE = /^([1-4][1-8]|[5-8][1-5])$/;
 
 const esTemporal = (diente: string) => Number(diente[0]) >= 5;
 
-// Cuadrante permanente del mismo lado de la boca: los temporales 5–8 equivalen a 1–4.
-const cuadrante = (diente: string) => ((Number(diente[0]) - 1) % 4) + 1;
+// Dientes de los dos lados de una arcada: permanentes (primer dígito 1–4) y temporales (5–8).
+const dientesDeArcada = (permanentes: number[], temporales: number[]) => [
+  ...permanentes.flatMap((lado) => POSICIONES.map((posicion) => `${lado}${posicion}`)),
+  ...temporales.flatMap((lado) => [1, 2, 3, 4, 5].map((posicion) => `${lado}${posicion}`)),
+];
 
-const temporalesDe = (cuadranteTemporal: number) => [1, 2, 3, 4, 5].map((posicion) => `${cuadranteTemporal}${posicion}`);
-const ES_CUADRANTE = /^C[1-4]$/;
+const ES_SEXTANTE = /^S[1-6]$/;
+
+const DIENTES_DE_SEXTANTE: Record<string, string[]> = {
+  S1: ['18', '17', '16', '15', '14', '55', '54'],
+  S2: ['13', '12', '11', '21', '22', '23', '53', '52', '51', '61', '62', '63'],
+  S3: ['24', '25', '26', '27', '28', '64', '65'],
+  S4: ['38', '37', '36', '35', '34', '75', '74'],
+  S5: ['33', '32', '31', '41', '42', '43', '73', '72', '71', '81', '82', '83'],
+  S6: ['44', '45', '46', '47', '48', '84', '85'],
+};
 
 export function alcanceDeZona(zona: string): Alcance | null {
   if (ES_DIENTE.test(zona)) return 'diente';
-  if (ES_CUADRANTE.test(zona)) return 'cuadrante';
+  if (ES_SEXTANTE.test(zona)) return 'sextante';
   if (zona === 'AS' || zona === 'AI') return 'arcada';
   if (zona === BOCA) return 'boca';
   return null;
 }
 
-export function dientesDeZona(zona: string): string[] {
+function dientesDeZona(zona: string): string[] {
   switch (alcanceDeZona(zona)) {
     case 'diente':
       return [zona];
-    case 'cuadrante':
-      // Sus dientes permanentes y los temporales del mismo lado (C1 → 51–55, …, C4 → 81–85).
-      return [...POSICIONES.map((posicion) => `${zona[1]}${posicion}`), ...temporalesDe(Number(zona[1]) + 4)];
+    case 'sextante':
+      return DIENTES_DE_SEXTANTE[zona];
     case 'arcada':
-      return zona === 'AS' ? [...dientesDeZona('C1'), ...dientesDeZona('C2')] : [...dientesDeZona('C3'), ...dientesDeZona('C4')];
+      return zona === 'AS' ? dientesDeArcada([1, 2], [5, 6]) : dientesDeArcada([3, 4], [7, 8]);
     default:
       return [];
   }
@@ -79,8 +81,8 @@ export function etiquetaZona(zona: string): string {
   switch (alcanceDeZona(zona)) {
     case 'diente':
       return `Diente ${zona}`;
-    case 'cuadrante':
-      return CUADRANTES[zona];
+    case 'sextante':
+      return `Sextante ${zona[1]}`;
     case 'arcada':
       return ARCADAS[zona];
     case 'boca':
@@ -90,14 +92,14 @@ export function etiquetaZona(zona: string): string {
   }
 }
 
-// Boca → arcadas → cuadrantes → dientes; dentro de cada grupo, por número.
+// Boca → arcadas → sextantes → dientes; dentro de cada grupo, por número.
 export function ordenZona(zona: string): number {
   switch (alcanceDeZona(zona)) {
     case 'boca':
       return 0;
     case 'arcada':
       return zona === 'AS' ? 1 : 2;
-    case 'cuadrante':
+    case 'sextante':
       return 2 + Number(zona[1]);
     case 'diente':
       return 10 + Number(zona);
@@ -109,21 +111,17 @@ export function ordenZona(zona: string): number {
 export const tipoDeDiente = (diente: string) =>
   (esTemporal(diente) ? TIPOS_DIENTE_TEMPORAL : TIPOS_DIENTE)[Number(diente[1]) - 1] ?? '';
 
-// Denticiones que salen en el PDF: las que tienen prestaciones por diente o cuadrante propias
-// (arcada y boca no cuentan); si no hay ninguna, la permanente.
+// Denticiones que salen en el PDF: las que tienen prestaciones por diente propias
+// (sextante, arcada y boca no cuentan); si no hay ninguna, la permanente.
 export function denticionesConPrestaciones(lineas: { zona: string }[]): ('permanente' | 'temporal')[] {
-  const propias = lineas.filter((l) => alcanceDeZona(l.zona) === 'diente' || alcanceDeZona(l.zona) === 'cuadrante');
-  const temporal = propias.some((l) => alcanceDeZona(l.zona) === 'diente' && esTemporal(l.zona));
-  const permanente = propias.some((l) => alcanceDeZona(l.zona) === 'cuadrante' || !esTemporal(l.zona));
+  const propias = lineas.filter((l) => alcanceDeZona(l.zona) === 'diente');
+  const temporal = propias.some((l) => esTemporal(l.zona));
+  const permanente = propias.some((l) => !esTemporal(l.zona));
   if (!temporal) return ['permanente'];
   return permanente ? ['permanente', 'temporal'] : ['temporal'];
 }
 
-// Si una línea en `zona` abarca lo seleccionado (un diente, una arcada o la boca).
+// Si una línea en `zona` abarca lo seleccionado (un diente, un sextante, una arcada o la boca).
 export function zonaAfecta(zona: string, seleccion: string): boolean {
   return zona === BOCA || zona === seleccion || dientesDeZona(zona).includes(seleccion);
 }
-
-// Cuadrante propuesto según la selección: el del diente seleccionado o, si no hay, el primero.
-export const cuadrantePorDefecto = (seleccion?: string | null) =>
-  seleccion && alcanceDeZona(seleccion) === 'diente' ? `C${cuadrante(seleccion)}` : 'C1';

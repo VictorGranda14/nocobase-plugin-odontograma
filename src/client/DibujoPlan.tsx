@@ -3,15 +3,7 @@ import { Tabs } from 'antd';
 import React, { useMemo, useState } from 'react';
 import { coloresDePrestaciones } from './colores';
 import { Linea } from './tipos';
-import { Alcance, alcanceDeZona, dientesDeZona, etiquetaZona, tipoDeDiente, zonaAfecta } from './zonas';
-
-const ESPECIFICIDAD: Record<Alcance, number> = { boca: 0, arcada: 1, cuadrante: 2, diente: 3 };
-
-// Arcadas y boca pintan solo su selector; cuadrantes y dientes, sus piezas.
-const zonasQuePinta = (zona: string) => {
-  const alcance = alcanceDeZona(zona);
-  return alcance === 'arcada' || alcance === 'boca' ? [zona] : dientesDeZona(zona);
-};
+import { alcanceDeZona, etiquetaZona, tipoDeDiente, zonaAfecta } from './zonas';
 
 interface DibujoPlanProps {
   lineas: Linea[];
@@ -26,12 +18,10 @@ export const DibujoPlan: React.FC<DibujoPlanProps> = ({ lineas, zona, onSeleccio
   const [denticion, setDenticion] = useState<Denticion>('permanente');
   const colorDe = useMemo(() => coloresDePrestaciones(lineas), [lineas]);
 
-  // Cada diente toma el color de la zona más específica que lo afecta (diente > cuadrante); cada selector, el de su última prestación.
+  // Cada diente y cada selector toman el color de su última prestación propia.
   const zonasPintadas = useMemo(() => {
     const pintados: Record<string, string> = {};
-    [...lineas]
-      .sort((a, b) => ESPECIFICIDAD[alcanceDeZona(a.zona) ?? 'boca'] - ESPECIFICIDAD[alcanceDeZona(b.zona) ?? 'boca'])
-      .forEach((linea) => zonasQuePinta(linea.zona).forEach((z) => (pintados[z] = colorDe(linea.FK_prestacion))));
+    lineas.forEach((linea) => (pintados[linea.zona] = colorDe(linea.FK_prestacion)));
     return pintados;
   }, [lineas, colorDe]);
 

@@ -106,3 +106,17 @@ test('seleccionar cada arcada y agregar una prestación se guarda en esa arcada 
     ['AI', frenillos.id],
   ]);
 });
+
+test('seleccionar un sextante y agregar una prestación se guarda en ese sextante con la ficha clínica', async ({ page, request }) => {
+  const destartraje = await prestacion(request, 'Destartraje por sextante');
+  const drawer = await nuevaFichaClinica(page);
+
+  await drawer.getByRole('button', { name: 'Crear plan nuevo' }).click();
+  const plan = drawer.locator('[data-odontograma]');
+  await agregarEnSelector(page, plan, 'Sextante 3', 'Destartraje por sextante');
+  await expect(plan.locator('.ant-table-row')).toHaveCount(1);
+  await enviar(page, drawer);
+
+  const lineas = await lineasDeLaFichaNueva(request);
+  expect(lineas.map((l) => [l.zona, l.FK_prestacion])).toEqual([['S3', destartraje.id]]);
+});

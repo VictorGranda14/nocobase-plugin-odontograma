@@ -1,9 +1,9 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { AutoComplete, Button, Input, InputNumber, Segmented, Select, Space, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { AutoComplete, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
+import React, { useState } from 'react';
 import { clp } from './constants';
 import { NuevaLinea, Prestacion } from './tipos';
-import { ALCANCES, Alcance, BOCA, CUADRANTES, alcanceDeZona, cuadrantePorDefecto } from './zonas';
+import { ALCANCES, Alcance, BOCA, alcanceDeZona } from './zonas';
 
 interface AgregarPrestacionProps {
   catalogo: Prestacion[];
@@ -15,13 +15,13 @@ interface AgregarPrestacionProps {
 
 const AVISOS = {
   diente: 'Selecciona el diente en el odontograma para agregar esta prestación.',
+  sextante: 'Selecciona el sextante en el odontograma para agregar esta prestación.',
   arcada: 'Selecciona la arcada superior o inferior en el odontograma para agregar esta prestación.',
 };
 
-// Prestación del catálogo, zona según su alcance (la selección del dibujo; el cuadrante, aparte; la boca, siempre) y precio.
+// Prestación del catálogo, zona según su alcance (la selección del dibujo; la boca, siempre) y precio.
 export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, seleccion, onAgregar }) => {
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
-  const [cuadrante, setCuadrante] = useState<string | null>(null);
   const [precio, setPrecio] = useState<number | null>(null);
   // Se conserva entre una prestación y otra, para agregar varias a la misma sección.
   const [seccion, setSeccion] = useState('');
@@ -30,19 +30,12 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
   const prestacion = catalogo.find((p) => p.id === prestacionId);
   const alcance = prestacion?.alcance;
   const zonaDeLaSeleccion = seleccion && alcanceDeZona(seleccion) === alcance ? seleccion : null;
-  const zonaEfectiva = alcance === 'boca' ? BOCA : alcance === 'cuadrante' ? cuadrante : zonaDeLaSeleccion;
-
-  // Al elegir otro diente, el cuadrante propuesto lo sigue.
-  useEffect(() => {
-    if (alcance === 'cuadrante' && seleccion && alcanceDeZona(seleccion) === 'diente') setCuadrante(cuadrantePorDefecto(seleccion));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seleccion]);
+  const zonaEfectiva = alcance === 'boca' ? BOCA : zonaDeLaSeleccion;
 
   const elegirPrestacion = (id: number) => {
     const elegida = catalogo.find((p) => p.id === id);
     setPrestacionId(id);
     setPrecio(elegida ? Number(elegida.precio) : null);
-    setCuadrante(elegida?.alcance === 'cuadrante' ? cuadrantePorDefecto(seleccion) : null);
   };
 
   const agregar = async () => {
@@ -55,7 +48,6 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
     }
     setPrestacionId(null);
     setPrecio(null);
-    setCuadrante(null);
   };
 
   const opcionesCatalogo = (Object.keys(ALCANCES) as Alcance[])
@@ -91,13 +83,6 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
         >
           <Input placeholder="Sección (opcional)" allowClear />
         </AutoComplete>
-        {alcance === 'cuadrante' && (
-          <Segmented
-            value={cuadrante}
-            onChange={(v) => setCuadrante(String(v))}
-            options={Object.keys(CUADRANTES).map((c) => ({ value: c, label: c, title: CUADRANTES[c] }))}
-          />
-        )}
         <InputNumber
           placeholder="Precio"
           min={0}
@@ -112,7 +97,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
           Agregar
         </Button>
       </Space>
-      {(alcance === 'diente' || alcance === 'arcada') && !zonaDeLaSeleccion && <Typography.Text type="warning">{AVISOS[alcance]}</Typography.Text>}
+      {alcance && alcance !== 'boca' && !zonaDeLaSeleccion && <Typography.Text type="warning">{AVISOS[alcance]}</Typography.Text>}
     </>
   );
 };
