@@ -1,6 +1,6 @@
 // Crea las colecciones del odontograma en una instancia NocoBase 1.x mediante su API,
 // con las mismas definiciones que genera la interfaz. En las que ya existen, solo agrega los campos que falten
-// y las opciones nuevas de los campos de selección.
+// y las opciones nuevas de los campos de selección, y quita las opciones retiradas.
 //
 // Uso:
 //   NOCOBASE_URL=https://staging.ejemplo.cl NOCOBASE_EMAIL=... NOCOBASE_PASSWORD=... node scripts/crear-colecciones.mjs
@@ -9,7 +9,12 @@
 // Requiere que ya existan las colecciones fichasClinicas y paciente.
 import { loadEnvFile } from 'node:process';
 
-loadEnvFile();
+// El archivo .env es opcional: basta con las variables del entorno, que tienen prioridad.
+try {
+  loadEnvFile();
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
 
 const URL_BASE = (process.env.NOCOBASE_URL || 'http://localhost:13001').replace(/\/$/, '');
 
@@ -169,14 +174,14 @@ const DIENTES = [
   ...[1, 2, 3, 4].flatMap((c) => [1, 2, 3, 4, 5, 6, 7, 8].map((p) => `${c}${p}`)),
   ...[5, 6, 7, 8].flatMap((c) => [1, 2, 3, 4, 5].map((p) => `${c}${p}`)),
 ];
+// Opciones que ya no se usan: se quitan de las colecciones existentes. Las demás no se tocan.
+const OPCIONES_RETIRADAS = new Set(['cuadrante', 'C1', 'C2', 'C3', 'C4']);
+
 const OPCIONES_ZONA = [
   { value: 'BOCA', label: 'Boca completa' },
   { value: 'AS', label: 'Arcada superior' },
   { value: 'AI', label: 'Arcada inferior' },
-  { value: 'C1', label: 'Cuadrante 1 · sup. derecho' },
-  { value: 'C2', label: 'Cuadrante 2 · sup. izquierdo' },
-  { value: 'C3', label: 'Cuadrante 3 · inf. izquierdo' },
-  { value: 'C4', label: 'Cuadrante 4 · inf. derecho' },
+  ...[1, 2, 3, 4, 5, 6].map((n) => ({ value: `S${n}`, label: `Sextante ${n}` })),
   ...DIENTES.map((d) => ({ value: d, label: d })),
 ];
 
@@ -188,7 +193,7 @@ const COLECCIONES = [
       texto('nombrePrestacion', 'Nombre de la prestación'),
       seleccion('alcance', 'Alcance', [
         { value: 'diente', label: 'Por diente', color: 'blue' },
-        { value: 'cuadrante', label: 'Por cuadrante', color: 'cyan' },
+        { value: 'sextante', label: 'Por sextante', color: 'cyan' },
         { value: 'arcada', label: 'Por arcada', color: 'purple' },
         { value: 'boca', label: 'Boca completa', color: 'orange' },
       ]),
@@ -281,13 +286,14 @@ async function existe(nombre) {
   return Array.isArray(data) && data.length > 0;
 }
 
-// En una colección que ya existe solo se agregan los campos que falten (por nombre); los demás no se tocan.
 // Opciones declaradas de un campo de selección que aún no tiene el campo existente.
 const opcionesFaltantes = (declarado, actual) => {
   const valores = new Set((actual.uiSchema?.enum ?? []).map((opcion) => opcion.value));
   return (declarado.uiSchema?.enum ?? []).filter((opcion) => !valores.has(opcion.value));
 };
 
+// En una colección que ya existe agrega los campos que falten (por nombre) y actualiza las opciones de los de selección;
+// lo demás no se toca.
 async function completarCampos(coleccion) {
   const actuales = await api(`collections/${coleccion.name}/fields:list`, { params: { paginate: 'false' } });
   const porNombre = new Map(actuales.map((campo) => [campo.name, campo]));
@@ -295,26 +301,28 @@ async function completarCampos(coleccion) {
   for (const campo of faltantes) {
     await api(`collections/${coleccion.name}/fields:create`, { values: campo });
   }
-  // A los campos de selección que ya existen les agrega las opciones nuevas (por ejemplo, los dientes temporales de zona).
+  // A los campos de selección que ya existen les agrega las opciones nuevas y les quita las retiradas.
   const ampliados = [];
   for (const campo of coleccion.fields.filter((c) => c.interface === 'select' && porNombre.has(c.name))) {
     const actual = porNombre.get(campo.name);
     const nuevas = opcionesFaltantes(campo, actual);
-    if (!nuevas.length) continue;
+    const vigentes = (actual.uiSchema?.enum ?? []).filter((opcion) => !OPCIONES_RETIRADAS.has(opcion.value));
+    if (!nuevas.length && vigentes.length === (actual.uiSchema?.enum ?? []).length) continue;
     await api(`collections/${coleccion.name}/fields:update`, {
       params: { filterByTk: campo.name },
-      values: { uiSchema: { ...actual.uiSchema, enum: [...(actual.uiSchema?.enum ?? []), ...nuevas] } },
+      values: { uiSchema: { ...actual.uiSchema, enum: [...vigentes, ...nuevas] } },
     });
     ampliados.push(campo.name);
   }
   const cambios = [
     faltantes.length && `se agregan ${faltantes.map((c) => c.name).join(', ')}`,
-    ampliados.length && `se amplían las opciones de ${ampliados.join(', ')}`,
+    ampliados.length && `se actualizan las opciones de ${ampliados.join(', ')}`,
   ].filter(Boolean);
   console.log(`= ${coleccion.name}: ya existe${cambios.length ? `, ${cambios.join('; ')}` : ''}`);
 }
 
 async function main() {
+  console.log(`Instancia: ${URL_BASE}`);
   TOKEN = await token();
   for (const requerida of ['fichasClinicas', 'paciente']) {
     if (!(await existe(requerida))) throw new Error(`No existe la colección ${requerida} en esta instancia.`);
