@@ -4,7 +4,7 @@ Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugar
 
 - Asociar la atención a un **plan de tratamiento** nuevo o continuar uno anterior del mismo paciente, para seguirlo a lo largo de varias citas.
 - Ver un odontograma (FDI) pintado según las prestaciones del plan, con pestañas para la dentición **permanente** y la **temporal**.
-- Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable.
+- Asignar prestaciones del catálogo a un **diente**, un **cuadrante**, una **arcada** o la **boca completa**, con precio editable. Los dientes, las arcadas y la boca se eligen en el dibujo, con una fila de selectores bajo los dientes.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
 - Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales). Incluye un odontograma por cada dentición con prestaciones por diente o cuadrante; las de arcada y boca no cuentan, y si no hay ninguna sale el permanente.
@@ -62,11 +62,21 @@ Es un plugin propio: no está publicado en npm ni en el marketplace de NocoBase,
 
 ## Uso
 
+### Agregar una prestación
+
+La zona de la prestación depende de su alcance en el catálogo:
+
+- **Diente o arcada:** se toma de lo seleccionado en el dibujo. Si no corresponde, «Agregar» queda deshabilitado y un aviso indica qué seleccionar.
+- **Cuadrante:** se elige en su propio control, que propone el cuadrante del diente seleccionado.
+- **Boca completa:** se agrega con cualquier selección, o sin ninguna.
+
+El interruptor «Filtrar solo lo que afecta a la selección» deja en la tabla lo que abarca la zona: con un diente, sus prestaciones y las de su cuadrante, su arcada y la boca; con una arcada, las de esa arcada y la boca; con la boca, solo las de la boca. El dibujo no se filtra.
+
 ### Bloque en el popup «Ver»
 
 1. En el popup «Ver» de una ficha dental, entrar en el editor de UI.
 2. Ir a *Añadir bloque → Otros bloques → Odontograma*.
-3. En los ajustes del bloque se puede activar **Solo lectura**: oculta agregar, eliminar y el cambio de estado, pero deja consultar dientes y descargar el PDF.
+3. En los ajustes del bloque se puede activar **Solo lectura**: oculta agregar, eliminar y el cambio de estado, pero deja consultar dientes y zonas, y descargar el PDF.
 
 Si la ficha dental aún no tiene plan, el bloque ofrece **Crear plan nuevo** o **Continuar plan**. «Continuar plan» lista los planes del paciente con su fecha de inicio y su cantidad de prestaciones. En solo lectura, el bloque solo avisa que no hay plan.
 
@@ -82,6 +92,6 @@ El campo también descarga el presupuesto en PDF, aun antes de guardar. Usa el p
 ## Limitaciones
 
 - Solo diente completo (caras: issue #2).
-- Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante > arcada). El tooltip y la tabla muestran todas las prestaciones que lo afectan.
-- La imagen del PDF no incluye la leyenda de colores; la tabla del presupuesto detalla cada línea.
+- Cada diente muestra un solo color: el de la zona más específica (diente > cuadrante). Las arcadas y la boca no pintan dientes, sino su selector, con el color de su última prestación. El tooltip muestra todas las prestaciones de esa zona, y el de un diente también las de arcada y boca que lo afectan.
+- En el PDF, la imagen no indica qué prestación corresponde a cada color; la tabla del presupuesto detalla cada línea. En pantalla, cada prestación tiene una etiqueta de su color en la tabla.
 - El plan de una atención no se cambia desde el bloque ni desde el campo una vez elegido.
