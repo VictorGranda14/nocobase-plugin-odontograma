@@ -127,12 +127,16 @@ export const fichaClinicaConPlan = async (request, zonas = [['16'], ['26']]) => 
 export const editarFichaClinica = async (page, id, filas = 2) => {
   await abrirPagina(page);
   // Por la acción de fichasClinicas: una fila de fichaDental con el mismo id también tiene «Editar».
-  await page
+  const editar = page
     .locator(`.ant-table-row[data-row-key="${id}"]`)
-    .locator('a[aria-label^="action-Action.Link-Editar-update-fichasClinicas-"]')
-    .click();
+    .locator('a[aria-label^="action-Action.Link-Editar-update-fichasClinicas-"]');
   const drawer = page.locator('.ant-drawer-content').last();
   const vista = drawer.locator('[data-odontograma]');
+  // El clic se puede perder si la tabla se vuelve a dibujar en ese momento: se reintenta hasta que se abra.
+  await expect(async () => {
+    if (!(await vista.isVisible())) await editar.click({ timeout: 2000 });
+    await expect(vista).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 20000 });
   await expect(vista.locator('.ant-table-row')).toHaveCount(filas);
   return { drawer, vista };
 };
