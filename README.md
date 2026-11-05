@@ -73,6 +73,10 @@ Al actualizarlo, se debe correr `scripts/crear-colecciones.mjs` **antes** de sub
 
 ### Agregar una prestación
 
+El selector de prestación se abre en dos columnas: a la izquierda, los alcances con prestaciones activas; a la derecha, las prestaciones del alcance marcado. El alcance se marca con un clic. Al abrir queda marcado el de la última prestación elegida.
+
+Al escribir, el selector busca por nombre en todo el catálogo y muestra el alcance y el precio de cada resultado, que se puede elegir con el mouse o con las flechas y Enter.
+
 La zona de la prestación depende de su alcance en el catálogo:
 
 - **Diente, sextante o arcada:** se toma de lo seleccionado en el dibujo. En un diente, cada clic en una cara del círculo la marca o la desmarca, y la prestación se registra en una sola línea con las caras marcadas (por ejemplo, «Diente 16 · Mesial · Oclusal»), con un precio y un estado. Sin caras marcadas, queda en el diente completo. El clic en el dibujo de perfil vuelve al diente completo. Si no corresponde, «Agregar» queda deshabilitado y un aviso indica qué seleccionar.
