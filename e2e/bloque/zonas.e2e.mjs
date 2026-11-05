@@ -341,9 +341,13 @@ test('el catálogo ofrece «Por sextante» y no queda ningún rastro de los cuad
 
     await selector(popup, 'Sextante 1').click();
     await popup.locator('.ant-select').first().click();
-    const grupos = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-group');
-    await expect(grupos.filter({ hasText: 'Por sextante' })).toHaveCount(1);
-    await expect(grupos.filter({ hasText: 'Por cuadrante' })).toHaveCount(0);
+    const alcances = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) [data-alcance]');
+    await expect(alcances.filter({ hasText: 'Por sextante' })).toHaveCount(1);
+    await expect(alcances.filter({ hasText: 'Por cuadrante' })).toHaveCount(0);
+    await page.keyboard.type('Antigua');
+    await expect(page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')).toContainText('Sin resultados');
+    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Backspace');
 
     await page.keyboard.type('Destartraje por sextante');
     await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option', { hasText: 'Destartraje por sextante' }).click();

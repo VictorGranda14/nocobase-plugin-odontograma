@@ -1,10 +1,11 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { AutoComplete, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
+import { AutoComplete, Button, Input, InputNumber, Space, Typography } from 'antd';
 import React, { useState } from 'react';
 import { clp } from './constants';
 import { CarasDeDiente, ListaDeZonas } from './ElegirZona';
+import { SelectorPrestacion } from './SelectorPrestacion';
 import { NuevaLinea, Prestacion } from './tipos';
-import { ALCANCES, Alcance, BOCA, alcanceDeZona } from './zonas';
+import { BOCA, alcanceDeZona } from './zonas';
 
 interface AgregarPrestacionProps {
   catalogo: Prestacion[];
@@ -72,29 +73,10 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({
     setPrecio(null);
   };
 
-  const opcionesCatalogo = (Object.keys(ALCANCES) as Alcance[])
-    .map((a) => ({
-      label: ALCANCES[a],
-      options: catalogo
-        .filter((p) => p.alcance === a)
-        .map((p) => ({ value: p.id, label: `${p.nombrePrestacion} · ${clp(p.precio)}` })),
-    }))
-    .filter((grupo) => grupo.options.length);
-
   return (
     <>
       <Space wrap align="end">
-        <Select
-          style={{ minWidth: 260 }}
-          placeholder="Prestación"
-          showSearch
-          optionFilterProp="label"
-          loading={cargando}
-          options={opcionesCatalogo}
-          value={prestacionId}
-          onChange={elegirPrestacion}
-          notFoundContent="No hay prestaciones activas en el catálogo"
-        />
+        <SelectorPrestacion catalogo={catalogo} cargando={cargando} value={prestacionId} onChange={elegirPrestacion} />
         {dibujoOculto && alcance && alcance !== 'boca' && <ListaDeZonas alcance={alcance} seleccion={seleccion} onSeleccionarZona={onSeleccionarZona} />}
         {/* Escribir un nombre nuevo crea la sección; existe mientras tenga prestaciones. */}
         <AutoComplete
