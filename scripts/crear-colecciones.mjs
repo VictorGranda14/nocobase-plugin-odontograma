@@ -221,6 +221,13 @@ const COLECCIONES = [
         name: 'planesTratamientoAsociados',
         title: 'Planes de Tratamiento Asociados',
       }),
+      // Sin valor, el dibujo se muestra: así se ven los planes creados antes de existir este campo.
+      {
+        name: 'mostrarOdontograma',
+        type: 'boolean',
+        interface: 'checkbox',
+        uiSchema: { type: 'boolean', 'x-component': 'Checkbox', title: 'Mostrar odontograma' },
+      },
     ],
   },
   {
