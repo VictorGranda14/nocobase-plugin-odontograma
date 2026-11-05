@@ -44,15 +44,16 @@ export const SelectorPrestacion: React.FC<SelectorPrestacionProps> = ({ catalogo
 
   const columnas = (
     // Sin esto, el clic le quitaría el foco al buscador y ya no se podría escribir.
-    <div style={{ display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)', maxHeight: 280 }} onMouseDown={(e) => e.preventDefault()}>
-      <div style={{ overflowY: 'auto', borderRight: '1px solid #f0f0f0' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)' }} onMouseDown={(e) => e.preventDefault()}>
+      <div style={{ maxHeight: 280, overflowY: 'auto', overscrollBehavior: 'contain', borderRight: '1px solid #f0f0f0' }}>
         {alcances.map((a) => (
           <Button key={a} data-alcance block type="text" aria-pressed={a === marcado} style={{ ...FILA, fontWeight: a === marcado ? 600 : 400, background: a === marcado ? '#e6f4ff' : undefined }} onClick={() => setAlcanceMarcado(a)}>
             {ALCANCES[a]}
           </Button>
         ))}
       </div>
-      <div style={{ overflowY: 'auto' }}>
+      {/* Con la clave, cada alcance muestra su lista desde arriba, sin heredar el desplazamiento del anterior. */}
+      <div key={marcado} style={{ maxHeight: 280, overflowY: 'auto', overscrollBehavior: 'contain' }}>
         {vigentes
           .filter((p) => p.alcance === marcado)
           .map((p) => (

@@ -6,12 +6,20 @@ import { abrirFicha, crearFicha, crearPlan, lineasDe, registrarHooks } from './a
 
 registrarHooks();
 
+// Chromium sin ventana oculta las barras de desplazamiento; aquí se prueba arrastrarlas.
+test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } });
+
 const CATALOGO = [
   { id: 9001, nombrePrestacion: 'Endodoncia', alcance: 'diente', precio: 180000 },
   { id: 9002, nombrePrestacion: 'Resina', alcance: 'diente', precio: 35000 },
   { id: 9003, nombrePrestacion: 'Destartraje', alcance: 'sextante', precio: 30000 },
   { id: 9004, nombrePrestacion: 'Prótesis', alcance: 'arcada', precio: 250000 },
   { id: 9005, nombrePrestacion: 'Limpieza', alcance: 'boca', precio: 25000 },
+];
+
+const LARGO = [
+  ...Array.from({ length: 30 }, (_, i) => ({ id: 9100 + i, nombrePrestacion: `Prestación ${i + 1}`, alcance: 'diente', precio: 1000 })),
+  ...Array.from({ length: 12 }, (_, i) => ({ id: 9200 + i, nombrePrestacion: `Limpieza ${i + 1}`, alcance: 'boca', precio: 1000 })),
 ];
 
 // El catálogo se simula en la respuesta, sin tocar los datos compartidos.
@@ -86,8 +94,7 @@ test('tras un clic real en un alcance, el selector sigue abierto y se puede segu
 });
 
 test('con un catálogo largo, el desplegable no crece y se llega a la última prestación con scroll', async ({ page, request }) => {
-  const largo = Array.from({ length: 30 }, (_, i) => ({ id: 9100 + i, nombrePrestacion: `Prestación ${i + 1}`, alcance: 'diente', precio: 1000 }));
-  await simularCatalogo(page, largo);
+  await simularCatalogo(page, LARGO);
   const popup = await abrirSelector(page, request);
 
   await expect(prestaciones(page)).toHaveCount(30);
@@ -95,6 +102,63 @@ test('con un catálogo largo, el desplegable no crece y se llega a la última pr
 
   await prestaciones(page).last().click();
 
+  await expect(popup.locator('.ant-select-selection-item').first()).toHaveText('Prestación 30 · Por diente');
+});
+
+// Un clic de Playwright desplaza por programa hasta el elemento, aunque la persona no tenga cómo hacerlo.
+// Estas pruebas mueven la lista como lo hace una persona.
+const columnaPrestaciones = (page) => prestaciones(page).first().locator('..');
+
+const ultimaSeVe = async (page) => {
+  const columna = await columnaPrestaciones(page).boundingBox();
+  const ultima = await prestaciones(page).last().boundingBox();
+  return ultima.y + ultima.height <= columna.y + columna.height;
+};
+
+const bajarConRueda = async (page) => {
+  await prestaciones(page).first().hover();
+  await page.mouse.wheel(0, 3000);
+};
+
+test('con un catálogo largo, la rueda del mouse llega a la última prestación', async ({ page, request }) => {
+  await simularCatalogo(page, LARGO);
+  await abrirSelector(page, request);
+  expect(await ultimaSeVe(page)).toBe(false);
+
+  await bajarConRueda(page);
+
+  await expect.poll(() => ultimaSeVe(page)).toBe(true);
+});
+
+test('tras bajar por una lista, otro alcance muestra sus prestaciones desde la primera', async ({ page, request }) => {
+  await simularCatalogo(page, LARGO);
+  await abrirSelector(page, request);
+  await bajarConRueda(page);
+  await expect.poll(() => ultimaSeVe(page)).toBe(true);
+
+  await alcances(page).filter({ hasText: 'Boca completa' }).click();
+
+  await expect(prestaciones(page).first()).toHaveText(/^Limpieza 1\b/);
+  const lista = await page.locator('.ant-select-dropdown:visible').boundingBox();
+  const primera = await prestaciones(page).first().boundingBox();
+  expect(primera.y).toBeGreaterThanOrEqual(lista.y);
+});
+
+test('arrastrar la barra de desplazamiento llega a la última prestación, sin cerrar el selector', async ({ page, request }) => {
+  await simularCatalogo(page, LARGO);
+  const popup = await abrirSelector(page, request);
+  // hover espera a que termine la animación de apertura: antes, las medidas saldrían alteradas.
+  await prestaciones(page).first().hover();
+  const columna = await columnaPrestaciones(page).boundingBox();
+
+  // La barra está en el borde derecho de la columna, en su parte superior.
+  await page.mouse.move(columna.x + columna.width - 6, columna.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(columna.x + columna.width - 6, columna.y + columna.height, { steps: 8 });
+  await page.mouse.up();
+
+  await expect.poll(() => ultimaSeVe(page)).toBe(true);
+  await prestaciones(page).last().click();
   await expect(popup.locator('.ant-select-selection-item').first()).toHaveText('Prestación 30 · Por diente');
 });
 
