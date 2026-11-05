@@ -122,6 +122,47 @@ export function ordenZona(zona: string): number {
 export const tipoDeDiente = (diente: string) =>
   (esTemporal(diente) ? TIPOS_DIENTE_TEMPORAL : TIPOS_DIENTE)[Number(diente[1]) - 1] ?? '';
 
+const numeroVisible = (diente: string) => `${diente[0]}.${diente[1]}`;
+
+function opcionesDeDientes() {
+  const opcion = (diente: string) => {
+    const nombre = `${numeroVisible(diente)} · ${tipoDeDiente(diente)}`;
+    return { value: diente, label: nombre, buscar: `${diente} ${nombre}` };
+  };
+  const grupo = (label: string, permanentes: number[], temporales: number[]) => ({
+    label,
+    options: dientesDeArcada(permanentes, temporales).map(opcion),
+  });
+  return [
+    grupo('Superior permanente', [1, 2], []),
+    grupo('Inferior permanente', [4, 3], []),
+    grupo('Superior temporal', [], [5, 6]),
+    grupo('Inferior temporal', [], [8, 7]),
+  ];
+}
+
+function opcionesDeSextantes() {
+  return Object.keys(DIENTES_DE_SEXTANTE).map((zona) => {
+    const permanentes = DIENTES_DE_SEXTANTE[zona].filter((diente) => !esTemporal(diente));
+    const nombre = `${etiquetaZona(zona)} · ${numeroVisible(permanentes[0])} a ${numeroVisible(permanentes[permanentes.length - 1])}`;
+    return { value: zona, label: nombre, buscar: nombre };
+  });
+}
+
+// Zonas de la lista que reemplaza al dibujo oculto, según el alcance; `buscar` es el texto donde busca el desplegable.
+export function opcionesDeZona(alcance: Alcance) {
+  switch (alcance) {
+    case 'diente':
+      return opcionesDeDientes();
+    case 'sextante':
+      return opcionesDeSextantes();
+    case 'arcada':
+      return Object.entries(ARCADAS).map(([value, label]) => ({ value, label, buscar: label }));
+    default:
+      return [];
+  }
+}
+
 // Denticiones que salen en el PDF: las que tienen prestaciones por diente propias
 // (sextante, arcada y boca no cuentan); si no hay ninguna, la permanente.
 export function denticionesConPrestaciones(lineas: { zona: string }[]): ('permanente' | 'temporal')[] {

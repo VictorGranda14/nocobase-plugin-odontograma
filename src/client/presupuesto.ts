@@ -21,7 +21,7 @@ const nombreFuncionario = (f: Record<string, any> = {}) =>
 export const useDescargarPresupuesto = () => {
   const { message } = App.useApp();
   return useCallback(
-    async ({ paciente, funcionario, fecha, observaciones, lineas }: DatosAtencion, svgs: SVGSVGElement[]) => {
+    async ({ paciente, funcionario, fecha, observaciones, lineas }: DatosAtencion, svgs: SVGSVGElement[] | null) => {
       try {
         const { generarPresupuestoPdf } = await import('./pdf');
         const { conImagen } = await generarPresupuestoPdf({

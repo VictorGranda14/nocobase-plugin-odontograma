@@ -158,9 +158,9 @@ test('el interruptor filtra la tabla con lo que abarca la zona seleccionada, sin
   await expect(filas).toHaveCount(4); // espera a que carguen las líneas
   const zonasVisibles = async () => (await filas.locator('td:first-child').allTextContents()).sort();
 
-  await expect(popup.getByRole('switch')).toBeDisabled();
+  await expect(popup.locator('[data-filtro]')).toBeDisabled();
   await selector(popup, 'Arcada superior').click();
-  await popup.getByRole('switch').click();
+  await popup.locator('[data-filtro]').click();
   await expect(popup.getByText('Filtrar solo lo que afecta a la selección')).toBeVisible();
   await expect(filas).toHaveCount(2);
   expect(await zonasVisibles()).toEqual(['Arcada superior', 'Boca completa']);
@@ -317,7 +317,7 @@ test('con un sextante seleccionado, el interruptor deja en la tabla ese sextante
   const zonasVisibles = async () => (await filas.locator('td:first-child').allTextContents()).sort();
 
   await selector(popup, 'Sextante 1').click();
-  await popup.getByRole('switch').click();
+  await popup.locator('[data-filtro]').click();
   await expect(filas).toHaveCount(2);
   expect(await zonasVisibles()).toEqual(['Boca completa', 'Sextante 1']);
 

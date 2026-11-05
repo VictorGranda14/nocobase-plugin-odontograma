@@ -32,6 +32,7 @@ export const CAMPOS_FICHA_CLINICA = {
 export const CAMPOS_PLAN = {
   fkPaciente: 'FK_paciente',
   lineas: 'prestacionesAsociadas',
+  mostrar: 'mostrarOdontograma',
 };
 
 export const CAMPOS_LINEA = {

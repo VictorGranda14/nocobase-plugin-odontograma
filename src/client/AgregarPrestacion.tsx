@@ -2,6 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { AutoComplete, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
 import React, { useState } from 'react';
 import { clp } from './constants';
+import { CarasDeDiente, ListaDeZonas } from './ElegirZona';
 import { NuevaLinea, Prestacion } from './tipos';
 import { ALCANCES, Alcance, BOCA, alcanceDeZona } from './zonas';
 
@@ -11,6 +12,10 @@ interface AgregarPrestacionProps {
   cargando?: boolean;
   seleccion: string | null;
   caras: string[];
+  // Con el dibujo oculto, la zona se elige en una lista dentro del formulario.
+  dibujoOculto: boolean;
+  onSeleccionarZona: (zona: string) => void;
+  onMarcarCara: (diente: string, cara: string) => void;
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
 }
 
@@ -20,8 +25,24 @@ const AVISOS = {
   arcada: 'Selecciona la arcada superior o inferior en el odontograma para agregar esta prestación.',
 };
 
+const AVISOS_DIBUJO_OCULTO = {
+  diente: 'Elige la pieza para agregar esta prestación.',
+  sextante: 'Elige el sextante para agregar esta prestación.',
+  arcada: 'Elige la arcada para agregar esta prestación.',
+};
+
 // Prestación del catálogo, zona según su alcance (la selección del dibujo; la boca, siempre) y precio.
-export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, secciones, cargando, seleccion, caras, onAgregar }) => {
+export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({
+  catalogo,
+  secciones,
+  cargando,
+  seleccion,
+  caras,
+  dibujoOculto,
+  onSeleccionarZona,
+  onMarcarCara,
+  onAgregar,
+}) => {
   const [prestacionId, setPrestacionId] = useState<number | null>(null);
   const [precio, setPrecio] = useState<number | null>(null);
   // Se conserva entre una prestación y otra, para agregar varias a la misma sección.
@@ -74,6 +95,7 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
           onChange={elegirPrestacion}
           notFoundContent="No hay prestaciones activas en el catálogo"
         />
+        {dibujoOculto && alcance && alcance !== 'boca' && <ListaDeZonas alcance={alcance} seleccion={seleccion} onSeleccionarZona={onSeleccionarZona} />}
         {/* Escribir un nombre nuevo crea la sección; existe mientras tenga prestaciones. */}
         <AutoComplete
           style={{ minWidth: 200 }}
@@ -98,7 +120,8 @@ export const AgregarPrestacion: React.FC<AgregarPrestacionProps> = ({ catalogo, 
           Agregar
         </Button>
       </Space>
-      {alcance && alcance !== 'boca' && !zonaDeLaSeleccion && <Typography.Text type="warning">{AVISOS[alcance]}</Typography.Text>}
+      {dibujoOculto && alcance === 'diente' && zonaDeLaSeleccion && <CarasDeDiente diente={zonaDeLaSeleccion} caras={caras} onMarcarCara={onMarcarCara} />}
+      {alcance && alcance !== 'boca' && !zonaDeLaSeleccion && <Typography.Text type="warning" style={{ display: 'block', marginTop: 8 }}>{(dibujoOculto ? AVISOS_DIBUJO_OCULTO : AVISOS)[alcance]}</Typography.Text>}
     </>
   );
 };

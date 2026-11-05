@@ -21,8 +21,8 @@ export interface DatosPresupuesto {
   fechaAtencion?: string;
   observaciones?: string;
   lineas: LineaPresupuesto[];
-  // Un odontograma por dentición, en orden.
-  svgs: SVGSVGElement[];
+  // Un odontograma por dentición, en orden; null si el dibujo está oculto y el PDF va sin él.
+  svgs: SVGSVGElement[] | null;
 }
 
 export interface ResultadoPdf {
@@ -126,8 +126,8 @@ export async function generarPresupuestoPdf(datos: DatosPresupuesto): Promise<Re
   });
   y += 2;
 
-  let conImagen = datos.svgs.length > 0;
-  for (const svg of datos.svgs) {
+  let conImagen = datos.svgs === null || datos.svgs.length > 0;
+  for (const svg of datos.svgs ?? []) {
     try {
       const { dataUrl, ancho, alto } = await svgAPng(svg);
       const altoImagen = Math.min(ALTO_MAX_IMAGEN, ((anchoPagina - 2 * MARGEN) * alto) / ancho);

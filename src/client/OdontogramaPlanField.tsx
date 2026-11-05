@@ -10,6 +10,7 @@ import {
   COLECCION_FUNCIONARIO,
   COLECCION_LINEAS,
   COLECCION_PACIENTE,
+  COLECCION_PLAN,
 } from './constants';
 import { ElegirPlan } from './ElegirPlan';
 import { PlanOdontograma } from './PlanOdontograma';
@@ -93,17 +94,20 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
   const eliminarSeccion = (nombre: string) => cambiarLineas(lineasPlan.filter((l) => l.seccion?.trim() !== nombre));
 
   const continuar = async (planId: number) => {
-    const respuesta = await api.resource(COLECCION_LINEAS).list({
-      filter: { [CAMPOS_LINEA.fkPlan]: planId },
-      appends: [CAMPOS_LINEA.prestacion, CAMPOS_LINEA.realizacion],
-      paginate: false,
-      sort: ['id'],
-    });
-    onChange?.({ id: planId, [CAMPOS_PLAN.lineas]: respuesta?.data?.data ?? [] });
+    const [plan, respuesta] = await Promise.all([
+      api.resource(COLECCION_PLAN).get({ filterByTk: planId }),
+      api.resource(COLECCION_LINEAS).list({
+        filter: { [CAMPOS_LINEA.fkPlan]: planId },
+        appends: [CAMPOS_LINEA.prestacion, CAMPOS_LINEA.realizacion],
+        paginate: false,
+        sort: ['id'],
+      }),
+    ]);
+    onChange?.({ id: planId, [CAMPOS_PLAN.mostrar]: plan?.data?.data?.[CAMPOS_PLAN.mostrar], [CAMPOS_PLAN.lineas]: respuesta?.data?.data ?? [] });
   };
 
   // Paciente y profesional salen de la ficha clínica; fecha y observaciones, de esta ficha dental.
-  const descargarPdf = async (svgs: SVGSVGElement[]) => {
+  const descargarPdf = async (svgs: SVGSVGElement[] | null) => {
     const obtener = async (recurso: string, id: number | null) =>
       id ? (await api.resource(recurso).get({ filterByTk: id }))?.data?.data : null;
     try {
@@ -145,6 +149,8 @@ export const OdontogramaPlanField: React.FC<OdontogramaPlanFieldProps> = observe
       catalogo={catalogo}
       cargandoCatalogo={cargando}
       readOnly={readOnly}
+      mostrar={value?.[CAMPOS_PLAN.mostrar] !== false}
+      onCambiarMostrar={(mostrar) => onChange?.({ ...value, [CAMPOS_PLAN.mostrar]: mostrar })}
       onAgregar={agregar}
       onAlternarEstado={alternarEstado}
       onEliminar={eliminar}

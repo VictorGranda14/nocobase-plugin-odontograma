@@ -16,13 +16,15 @@ interface PlanOdontogramaProps {
   cargandoCatalogo?: boolean;
   cargandoLineas?: boolean;
   readOnly: boolean;
+  mostrar: boolean;
+  onCambiarMostrar: (mostrar: boolean) => void;
   onAgregar: (nueva: NuevaLinea) => Promise<void> | void;
   onAlternarEstado: (linea: Linea) => void;
   onEliminar: (linea: Linea) => void;
   onRenombrarSeccion: (nombre: string, nuevo: string) => void;
   onEliminarSeccion: (nombre: string) => void;
-  // Si se indica, muestra el botón del presupuesto en PDF; recibe el SVG de cada odontograma.
-  onDescargarPdf?: (svgs: SVGSVGElement[]) => Promise<void>;
+  // Si se indica, muestra el botón del presupuesto en PDF; recibe el SVG de cada odontograma, o null si el dibujo está oculto.
+  onDescargarPdf?: (svgs: SVGSVGElement[] | null) => Promise<void>;
 }
 
 const titulo = (zona: string | null, caras: string[]) => {
@@ -37,6 +39,8 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   cargandoCatalogo,
   cargandoLineas,
   readOnly,
+  mostrar,
+  onCambiarMostrar,
   onAgregar,
   onAlternarEstado,
   onEliminar,
@@ -66,12 +70,16 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
     setCaras((actuales) => (actuales.includes(cara) ? actuales.filter((c) => c !== cara) : [...actuales, cara]));
   };
 
-  const filtro = soloSeleccion && zona ? (l: Linea) => zonaAfecta(l.zona, zona) : undefined;
+  const filtro = mostrar && soloSeleccion && zona ? (l: Linea) => zonaAfecta(l.zona, zona) : undefined;
 
   // Dibuja fuera de pantalla cada dentición con prestaciones y las pasa al PDF.
   const descargarPdf = async () => {
     setGenerandoPdf(true);
     try {
+      if (!mostrar) {
+        await onDescargarPdf(null);
+        return;
+      }
       setCapturar(denticionesConPrestaciones(lineas));
       await new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver)));
       const svgs = Array.from(contenedor.current?.querySelectorAll<SVGSVGElement>('[data-captura-pdf] > div > svg') ?? []);
@@ -85,27 +93,39 @@ export const PlanOdontograma: React.FC<PlanOdontogramaProps> = ({
   return (
     <Row gutter={[24, 16]} data-odontograma>
       <Col span={24}>
-        <div ref={contenedor}>
-          <DibujoPlan lineas={lineas} zona={zona} caras={caras} onSeleccionarZona={seleccionarZona} onMarcarCara={marcarCara} capturar={capturar} />
-        </div>
+        <Space>
+          <Switch size="small" aria-label="Mostrar odontograma" checked={mostrar} disabled={readOnly} onChange={onCambiarMostrar} />
+          <Typography.Text>Mostrar odontograma</Typography.Text>
+        </Space>
       </Col>
+      {mostrar && (
+        <Col span={24}>
+          <div ref={contenedor}>
+            <DibujoPlan lineas={lineas} zona={zona} caras={caras} onSeleccionarZona={seleccionarZona} onMarcarCara={marcarCara} capturar={capturar} />
+          </div>
+        </Col>
+      )}
       <Col span={24}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            {titulo(zona, caras)}
-          </Typography.Title>
+          {mostrar && (
+            <Typography.Title level={5} style={{ margin: 0 }}>
+              {titulo(zona, caras)}
+            </Typography.Title>
+          )}
 
-          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} seleccion={zona} caras={caras} onAgregar={onAgregar} />}
+          {!readOnly && <AgregarPrestacion catalogo={catalogo} secciones={nombresDeSecciones(lineas)} cargando={cargandoCatalogo} seleccion={zona} caras={caras} dibujoOculto={!mostrar} onSeleccionarZona={seleccionarZona} onMarcarCara={marcarCara} onAgregar={onAgregar} />}
 
-          <Space>
-            <Switch size="small" checked={soloSeleccion} disabled={!zona} onChange={setSoloSeleccion} />
-            <Typography.Text>Filtrar solo lo que afecta a la selección</Typography.Text>
-          </Space>
+          {mostrar && (
+            <Space>
+              <Switch data-filtro size="small" checked={soloSeleccion} disabled={!zona} onChange={setSoloSeleccion} />
+              <Typography.Text>Filtrar solo lo que afecta a la selección</Typography.Text>
+            </Space>
+          )}
 
           <TablaPrestaciones
             lineas={lineas}
             filtro={filtro}
-            zona={zona}
+            zona={mostrar ? zona : null}
             readOnly={readOnly}
             cargando={cargandoLineas}
             onAlternarEstado={onAlternarEstado}

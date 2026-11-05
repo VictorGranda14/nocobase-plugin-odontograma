@@ -36,7 +36,7 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       action: 'get',
       params: {
         filterByTk: fichaId,
-        appends: [`${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.paciente}`, `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.funcionario}`],
+        appends: [CAMPOS_FICHA.plan, `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.paciente}`, `${CAMPOS_FICHA.fichaClinica}.${CAMPOS_FICHA.funcionario}`],
       },
     },
     { ready: !!fichaId, refreshDeps: [fichaId] },
@@ -126,7 +126,18 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
     await asociarPlan(respuesta?.data?.data?.id);
   };
 
-  const descargarPdf = (svgs: SVGSVGElement[]) =>
+  // No toca las prestaciones: solo se recarga la ficha, que trae el plan.
+  const cambiarMostrar = async (mostrar: boolean) => {
+    try {
+      await api.resource(COLECCION_PLAN).update({ filterByTk: planId, values: { [CAMPOS_PLAN.mostrar]: mostrar } });
+      await fichaReq.refresh();
+    } catch (error) {
+      // El cliente de NocoBase ya notifica los errores de la API (permisos, validación…).
+      console.error('[odontograma]', error);
+    }
+  };
+
+  const descargarPdf = (svgs: SVGSVGElement[] | null) =>
     descargarPresupuesto(
       {
         paciente: ficha?.[CAMPOS_FICHA.fichaClinica]?.[CAMPOS_FICHA.paciente],
@@ -172,6 +183,8 @@ const OdontogramaBlockBase: React.FC<OdontogramaBlockProps> = ({ readOnly = fals
       cargandoCatalogo={cargandoCatalogo}
       cargandoLineas={lineasReq.loading}
       readOnly={readOnly}
+      mostrar={ficha[CAMPOS_FICHA.plan]?.[CAMPOS_PLAN.mostrar] !== false}
+      onCambiarMostrar={cambiarMostrar}
       onAgregar={agregar}
       onAlternarEstado={alternarEstado}
       onEliminar={eliminar}

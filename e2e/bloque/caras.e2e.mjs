@@ -189,7 +189,7 @@ test('el interruptor de filtro sigue funcionando por diente e incluye sus línea
 
   // Con otra cara marcada del mismo diente, su línea por «Distal» sigue visible.
   await cara(popup, '1.6', 'Mesial').click();
-  await popup.getByRole('switch').click();
+  await popup.locator('[data-filtro]').click();
   await expect(filas).toHaveCount(2);
   expect((await zonasDeLaTabla(popup)).sort()).toEqual(['Boca completa', 'Diente 16 · Distal']);
 });
