@@ -5,6 +5,7 @@ Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugar
 - Asociar la atención a un **plan de tratamiento** nuevo o continuar uno anterior del mismo paciente, para seguirlo a lo largo de varias citas.
 - Ver un odontograma (FDI) pintado según las prestaciones del plan, con pestañas para la dentición **permanente** y la **temporal**.
 - Asignar prestaciones del catálogo a un **diente**, un **sextante**, una **arcada** o la **boca completa**, con precio editable. Se eligen en el dibujo, con dos filas de selectores bajo los dientes. Una prestación de diente también puede ir a una o varias de sus **caras**.
+- **Mostrar u ocultar el dibujo** de cada plan. Oculto, las zonas se eligen en una lista y el PDF sale sin odontograma.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
 - Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales), con las caras de cada línea. Incluye un odontograma por cada dentición con prestaciones por diente; las de sextante, arcada y boca no cuentan, y si no hay ninguna sale el permanente.
@@ -32,7 +33,7 @@ NOCOBASE_URL=https://<instancia> NOCOBASE_EMAIL=<admin> NOCOBASE_PASSWORD=<clave
 | Colección | Campos |
 |---|---|
 | `prestacionesDentales` (catálogo) | `nombrePrestacion`, `alcance` (`diente`/`sextante`/`arcada`/`boca`), `precio` (CLP), `color`, `activo` |
-| `planesTratamiento` (plan) | `pacienteAsociado` → `paciente` (`FK_paciente`; inversa `planesTratamientoAsociados`) |
+| `planesTratamiento` (plan) | `pacienteAsociado` → `paciente` (`FK_paciente`; inversa `planesTratamientoAsociados`), `mostrarOdontograma` |
 | `fichaDental` (atención) | `fecha`, `observaciones`, `fichaClinicaAsociada` → `fichasClinicas` (`FK_fichaClinica`; inversa `fichasDentalesAsociadas`), `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `fichasDentalesAsociadas`) |
 | `prestacionesPlanTratamiento` (líneas) | `planTratamientoAsociado` → `planesTratamiento` (`FK_planTratamiento`; inversa `prestacionesAsociadas`), `fichaDentalRealizacion` → `fichaDental` (`FK_fichaDentalRealizacion`; inversa `prestacionesRealizadas`), `prestacionAsociada` → `prestacionesDentales` (`FK_prestacion`), `zona`, `caras`, `precio`, `estado` (`planificado`/`realizado`), `seccion`, `notas` |
 
@@ -43,6 +44,8 @@ Cada ficha dental (una atención) apunta a un plan, y un plan se comparte entre 
 `zona` vale `11`…`48` (diente permanente), `51`…`85` (diente temporal), `S1`…`S6` (sextante), `AS`/`AI` (arcada) o `BOCA`. El precio de cada línea es una copia del catálogo al agregarla, así que cambiar el catálogo no altera presupuestos ya hechos.
 
 `caras` guarda las caras de una línea de diente, separadas por coma (`Mesial,Oclusal`). Si está vacío, la línea es del diente completo.
+
+`mostrarOdontograma` guarda si el plan muestra el dibujo. Si está vacío, lo muestra.
 
 Cada sextante incluye sus dientes permanentes y temporales: S1 18–14 y 55–54, S2 13–23 y 53–63, S3 24–28 y 64–65, S4 38–34 y 75–74, S5 33–43 y 73–83, S6 44–48 y 84–85.
 
@@ -76,6 +79,16 @@ La zona de la prestación depende de su alcance en el catálogo:
 - **Boca completa:** se agrega con cualquier selección, o sin ninguna.
 
 El interruptor «Filtrar solo lo que afecta a la selección» deja en la tabla lo que abarca la zona: con un diente, sus prestaciones y las de su sextante, su arcada y la boca; con un sextante o una arcada, las de esa zona y la boca; con la boca, solo las de la boca. El dibujo no se filtra.
+
+### Mostrar u ocultar el odontograma
+
+El interruptor «Mostrar odontograma» es de cada plan, así que vale para todas sus atenciones. El bloque guarda el cambio al instante, y el campo del formulario, al pulsar «Enviar». En solo lectura se ve bloqueado con lo guardado.
+
+Con el dibujo oculto:
+
+- No se muestran el dibujo, sus pestañas, el título de la selección ni el filtro, y la tabla muestra todas las prestaciones sin resaltar ninguna.
+- Al elegir una prestación por diente, por sextante o por arcada, aparece una lista con buscador con las zonas de ese alcance. Los dientes se buscan por número o por tipo, y al elegir uno se pueden marcar sus caras. Las prestaciones de boca completa no necesitan elegir zona.
+- El presupuesto en PDF sale sin odontograma.
 
 ### Bloque en el popup «Ver»
 
