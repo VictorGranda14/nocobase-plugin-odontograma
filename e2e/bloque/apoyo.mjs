@@ -68,16 +68,23 @@ export const registrarHooks = () => {
 // La primera tabla de la página «Fichas dentales» es la de fichas dentales, por orden de creación:
 // `desdeElFinal` 0 es la última creada.
 export const abrirFicha = async (page, desdeElFinal = 0) => {
+  await page.getByRole('menuitem', { name: 'Fichas dentales' }).click();
+  await page.waitForURL(/\/admin\/[^/]+$/);
+  // Si la tabla ya cargó al iniciar sesión, el clic no la vuelve a pedir y le faltarían las fichas de la prueba: se recarga.
   await Promise.all([
     page.waitForResponse((respuesta) => respuesta.url().includes('fichaDental:list')),
-    page.getByRole('menuitem', { name: 'Fichas dentales' }).click(),
+    page.reload(),
   ]);
   await page.waitForLoadState('networkidle');
   const filas = page.locator('.ant-table').first().locator('.ant-table-row');
-  await filas.nth((await filas.count()) - 1 - desdeElFinal).getByText('Ver', { exact: true }).click();
+  const ver = filas.nth((await filas.count()) - 1 - desdeElFinal).getByText('Ver', { exact: true });
   // El bloque es la tarjeta del odontograma (el popup puede abrirse como drawer o como subpágina).
   const bloque = page.locator('.ant-card').filter({ has: page.locator('[data-odontograma]') });
-  await expect(bloque).toBeVisible();
+  // El clic se puede perder si la tabla se vuelve a dibujar en ese momento: se reintenta hasta que se abra.
+  await expect(async () => {
+    if (!(await bloque.isVisible())) await ver.click({ timeout: 2000 });
+    await expect(bloque).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 20000 });
   return bloque;
 };
 
