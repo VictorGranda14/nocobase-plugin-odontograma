@@ -64,7 +64,9 @@ export const ESTADOS = {
 
 export type Estado = keyof typeof ESTADOS;
 
-export const PDF_TITULO = 'GranSalud - Presupuesto dental';
+export const PDF_TITULO = 'Presupuesto dental';
+export const PDF_CIUDAD = 'Valparaíso';
+export const PDF_NOTA_TOTAL = 'El valor indicado corresponde al conjunto de las prestaciones detalladas.';
 export const PDF_NOTA_VALIDEZ =
   'Presupuesto válido por 30 días desde su emisión. Los valores pueden variar según la evolución clínica del paciente.';
 

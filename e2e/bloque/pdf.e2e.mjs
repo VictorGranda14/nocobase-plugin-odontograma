@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs/promises';
-import { api } from '../apoyo.mjs';
+import { IMAGENES_MEMBRETE, api } from '../apoyo.mjs';
 import { abrirFicha, agregarEnDiente, crearFicha, crearLinea, crearPlan, ctx, prestacion, registrarHooks } from './apoyo.mjs';
 
 // Presupuesto en PDF descargado desde el bloque.
@@ -53,20 +53,26 @@ test('el PDF incluye un odontograma por cada dentición con prestaciones', async
 
   const popup = await abrirFicha(page);
   await expect(popup.locator('.ant-table-row')).toHaveCount(1);
-  const imagenesDelPdf = async () => {
+  const descargarPdf = async () => {
     const [descarga] = await Promise.all([
       page.waitForEvent('download'),
       popup.getByRole('button', { name: /Descargar presupuesto/ }).click(),
     ]);
-    const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
-    return contenido.match(/\/Subtype\s*\/Image/g)?.length ?? 0;
+    return (await fs.readFile(await descarga.path())).toString('latin1');
   };
+  const imagenesDe = (contenido) => contenido.match(/\/Subtype\s*\/Image/g)?.length ?? 0;
 
-  expect(await imagenesDelPdf()).toBe(1); // solo permanentes
+  expect(imagenesDe(await descargarPdf())).toBe(IMAGENES_MEMBRETE + 1); // solo permanentes
 
   await popup.getByRole('tab', { name: 'Temporal' }).click();
   await agregarEnDiente(page, popup, '5.4', 'Resina');
   await expect(popup.locator('.ant-table-row')).toHaveCount(2);
 
-  expect(await imagenesDelPdf()).toBe(2); // permanentes y temporales
+  const conAmbas = await descargarPdf();
+  expect(imagenesDe(conAmbas)).toBe(IMAGENES_MEMBRETE + 2); // permanentes y temporales
+
+  // La tabla empieza en la segunda hoja y esa hoja también lleva el membrete.
+  const hojas = conAmbas.match(/\/Type\s*\/Page\b/g).length;
+  expect(hojas).toBe(2);
+  expect(conAmbas.match(/\/I\d+ Do/g).length).toBe(IMAGENES_MEMBRETE * hojas + 2);
 });

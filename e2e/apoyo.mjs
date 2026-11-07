@@ -2,6 +2,9 @@ import { expect } from '@playwright/test';
 
 // Apoyo común a las pruebas del bloque y del formulario: credenciales, sesión y llamadas a la API.
 
+// Todo PDF lleva el logo y la franja del membrete; los odontogramas se suman a estas imágenes.
+export const IMAGENES_MEMBRETE = 2;
+
 export const USUARIO = process.env.E2E_USER || 'admin@nocobase.com';
 export const CLAVE = process.env.E2E_PASSWORD || 'admin123';
 

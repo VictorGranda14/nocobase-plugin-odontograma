@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs/promises';
-import { api } from '../apoyo.mjs';
+import { IMAGENES_MEMBRETE, api } from '../apoyo.mjs';
 import { abrirFicha, crearFicha, crearLinea, crearPlan, lineasDe, prestacion, registrarHooks } from './apoyo.mjs';
 
 // Interruptor «Mostrar odontograma» del bloque: qué se ve con el dibujo oculto.
@@ -266,7 +266,7 @@ test('con el dibujo oculto, el aviso de zona queda debajo del formulario aunque 
   expect(aviso.y).toBeGreaterThanOrEqual(agregar.y + agregar.height);
 });
 
-test('con el dibujo oculto, el PDF sale con la tabla, sin imágenes y sin aviso de imágenes faltantes', async ({ page, request }) => {
+test('con el dibujo oculto, el PDF sale con la tabla, sin odontograma y sin aviso de imágenes faltantes', async ({ page, request }) => {
   await fichaConPrestaciones(request);
   const popup = await abrirFicha(page);
   await expect(popup.locator('.ant-table-row')).toHaveCount(2);
@@ -285,7 +285,7 @@ test('con el dibujo oculto, el PDF sale con la tabla, sin imágenes y sin aviso 
 
   expect(contenido).toContain('(Diente 16)');
   expect(contenido).toContain('(Diente 26)');
-  expect(imagenesDe(contenido)).toBe(0);
+  expect(imagenesDe(contenido)).toBe(IMAGENES_MEMBRETE);
   expect(await aparecioElAviso).toBe(false);
 });
 
@@ -295,12 +295,12 @@ test('al volver a mostrar el dibujo, el PDF lo incluye de nuevo', async ({ page,
   await expect(popup.locator('.ant-table-row')).toHaveCount(2);
   await interruptor(popup).click();
   await expect(popup.getByRole('tab')).toHaveCount(0);
-  expect(imagenesDe(await descargarPdf(page, popup))).toBe(0);
+  expect(imagenesDe(await descargarPdf(page, popup))).toBe(IMAGENES_MEMBRETE);
 
   await interruptor(popup).click();
   await expect(popup.getByRole('tab', { name: 'Permanente' })).toBeVisible();
 
-  expect(imagenesDe(await descargarPdf(page, popup))).toBe(1);
+  expect(imagenesDe(await descargarPdf(page, popup))).toBe(IMAGENES_MEMBRETE + 1);
 });
 
 test('con el dibujo oculto, un diente temporal se puede buscar y registrar', async ({ page, request }) => {

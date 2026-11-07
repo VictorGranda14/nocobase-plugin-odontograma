@@ -8,7 +8,7 @@ Plugin propio de GranSalud para NocoBase 1.x. Agrega un odontograma en dos lugar
 - **Mostrar u ocultar el dibujo** de cada plan. Oculto, las zonas se eligen en una lista y el PDF sale sin odontograma.
 - Marcar cada prestación como planificada o realizada (se registra la atención en que se realizó), y ver los totales.
 - Ordenar el plan en **secciones** con nombre (por ejemplo, etapas), cada una con su subtotal. Se pueden renombrar o eliminar desde su menú; eliminar una sección elimina sus prestaciones.
-- Descargar el **presupuesto en PDF** (paciente, profesional, odontograma, detalle y totales), con las caras de cada línea. Incluye un odontograma por cada dentición con prestaciones por diente; las de sextante, arcada y boca no cuentan, y si no hay ninguna sale el permanente.
+- Descargar el **presupuesto en PDF** en hoja Carta membretada (paciente, profesional, odontograma, detalle y totales), con las caras de cada línea. Incluye un odontograma por cada dentición con prestaciones por diente; las de sextante, arcada y boca no cuentan, y si no hay ninguna sale el permanente.
 
 Lee y escribe colecciones normales con la API de NocoBase, así que se aplican los permisos de cada rol.
 

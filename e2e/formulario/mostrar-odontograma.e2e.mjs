@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs/promises';
-import { api } from '../apoyo.mjs';
+import { IMAGENES_MEMBRETE, api } from '../apoyo.mjs';
 import { cerrarSinGuardar, ctx, editarFichaClinica, enviar, fichaClinicaConPlan, nuevaFichaClinica, nuevas, prestacion, registrarHooks } from './apoyo.mjs';
 
 // Interruptor «Mostrar odontograma» en el formulario: la elección se graba con el resto del plan al pulsar «Enviar».
@@ -82,7 +82,7 @@ test('al continuar un plan guardado como oculto, se abre oculto', async ({ page,
   await cerrarSinGuardar(page, drawer);
 });
 
-test('con el dibujo oculto, el PDF del formulario sale sin imágenes y sin aviso', async ({ page, request }) => {
+test('con el dibujo oculto, el PDF del formulario sale sin odontograma y sin aviso', async ({ page, request }) => {
   const { fichaClinica } = await fichaClinicaConPlan(request);
   const { drawer, vista } = await editarFichaClinica(page, fichaClinica.id);
   await interruptor(vista).click();
@@ -103,7 +103,7 @@ test('con el dibujo oculto, el PDF del formulario sale sin imágenes y sin aviso
   const contenido = (await fs.readFile(await descarga.path())).toString('latin1');
 
   expect(contenido).toContain('(Diente 16)');
-  expect(contenido.match(/\/Subtype\s*\/Image/g)?.length ?? 0).toBe(0);
+  expect(contenido.match(/\/Subtype\s*\/Image/g)?.length ?? 0).toBe(IMAGENES_MEMBRETE);
   expect(await aparecioElAviso).toBe(false);
   await cerrarSinGuardar(page, drawer);
 });
